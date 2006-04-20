@@ -34,8 +34,10 @@
 #define SPLICE_PIPE_LOOPS 10
 
 static int sendfile_loops = SENDFILE_LOOPS;
-static int splice_loops = SPLICE_LOOPS;
 static int splice_pipe_loops = SPLICE_PIPE_LOOPS;
+#if 0
+static int splice_loops = SPLICE_LOOPS;
+#endif
 
 static volatile long long *cycles, cycles_per_sec;
 
@@ -139,125 +141,122 @@ static int child(struct sockaddr *addr, int len)
 	fprintf(stdout, "BUFSIZE = %d\n", BUFSIZE);
 	fflush(stdout);
 
-	if (getenv("EMPTY")) {
-		if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
-			return error("connect");
+	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+		return error("connect");
 
-		start_timing("Empty buffer");
-		for (i = 0; i < NR; i++)
-			write(sk, buffer, BUFSIZE);
-		end_timing(NR*BUFSIZE, &r1);
+	start_timing("Empty buffer");
+	for (i = 0; i < NR; i++)
+		write(sk, buffer, BUFSIZE);
+	end_timing(NR*BUFSIZE, &r1);
 
-		fd = open("largefile", O_RDONLY);
-		if (fd < 0)
-			return error("largefile");
+	fd = open("largefile", O_RDONLY);
+	if (fd < 0)
+		return error("largefile");
 
-		start_timing("Read/write loop");
-		for (i = 0; i < NR; i++) {
-			if (read(fd, buffer, BUFSIZE) != BUFSIZE)
-				return error("largefile read");
-			write(sk, buffer, BUFSIZE);
-		}
-		end_timing(NR*BUFSIZE, &r2);
-		close(fd);
-		close(sk);
+	start_timing("Read/write loop");
+	for (i = 0; i < NR; i++) {
+		if (read(fd, buffer, BUFSIZE) != BUFSIZE)
+			return error("largefile read");
+		write(sk, buffer, BUFSIZE);
 	}
+	end_timing(NR*BUFSIZE, &r2);
+	close(fd);
+	close(sk);
 
-	if (getenv("SF")) {
-		start_timing("sendfile");
+	start_timing("sendfile");
 sendfile_again:
-		sk = socket(PF_INET, SOCK_STREAM, 0);
-		if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
-			return error("connect");
+	sk = socket(PF_INET, SOCK_STREAM, 0);
+	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+		return error("connect");
 
-		fd = open("largefile", O_RDONLY);
-		if (fd < 0)
-			return error("largefile");
+	fd = open("largefile", O_RDONLY);
+	if (fd < 0)
+		return error("largefile");
 
-		i = NR*BUFSIZE;
-		do {
-			int ret = sendfile(sk, fd, NULL, i);
-			i -= ret;
-		} while (i);
+	i = NR*BUFSIZE;
+	do {
+		int ret = sendfile(sk, fd, NULL, i);
+		i -= ret;
+	} while (i);
 
-		close(fd);
-		close(sk);
-		if (--sendfile_loops)
-			goto sendfile_again;
-		c1 = end_timing(NR*BUFSIZE*SENDFILE_LOOPS, &r3);
-	} else
-		c1 = 0;
+	close(fd);
+	close(sk);
+	if (--sendfile_loops)
+		goto sendfile_again;
+	c1 = end_timing(NR*BUFSIZE*SENDFILE_LOOPS, &r3);
 
-	if (getenv("SPLICE_PIPE")) {
-		start_timing("splice-pipe");
+	start_timing("splice-pipe");
 splice_pipe_again:
-		sk = socket(PF_INET, SOCK_STREAM, 0);
-		if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
-			return error("connect");
+	sk = socket(PF_INET, SOCK_STREAM, 0);
+	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+		return error("connect");
 
-		fd = open("largefile", O_RDONLY);
-		if (fd < 0)
-			return error("largefile");
-		if (pipe(pipefd) < 0)
-			return error("pipe");
+	fd = open("largefile", O_RDONLY);
+	if (fd < 0)
+		return error("largefile");
+	if (pipe(pipefd) < 0)
+		return error("pipe");
 
-		i = NR*BUFSIZE;
-		off = 0;
-		do {
-			int ret = splice(fd, &off, pipefd[1], NULL, min(i, BUFSIZE), SPLICE_F_NONBLOCK);
-			if (ret <= 0)
-				return error("splice-pipe-in");
-			i -= ret;
-			while (ret > 0) {
-				int flags = i ? SPLICE_F_MORE : 0;
-				int written = splice(pipefd[0], NULL, sk, NULL, ret, flags);
-				if (written <= 0)
-					return error("splice-pipe-out");
-				ret -= written;
-			}
-		} while (i);
+	i = NR*BUFSIZE;
+	off = 0;
+	do {
+		int ret = splice(fd, &off, pipefd[1], NULL, min(i, BUFSIZE), SPLICE_F_NONBLOCK);
+		if (ret <= 0)
+			return error("splice-pipe-in");
+		i -= ret;
+		while (ret > 0) {
+			int flags = i ? SPLICE_F_MORE : 0;
+			int written = splice(pipefd[0], NULL, sk, NULL, ret, flags);
+			if (written <= 0)
+				return error("splice-pipe-out");
+			ret -= written;
+		}
+	} while (i);
 
-		close(fd);
-		close(sk);
-		close(pipefd[0]);
-		close(pipefd[1]);
-		if (--splice_pipe_loops)
-			goto splice_pipe_again;
-		c2 = end_timing(NR*BUFSIZE*SPLICE_LOOPS, &r4);
-	} else
-		c2 = 0;
+	close(fd);
+	close(sk);
+	close(pipefd[0]);
+	close(pipefd[1]);
+	if (--splice_pipe_loops)
+		goto splice_pipe_again;
+	c2 = end_timing(NR*BUFSIZE*SPLICE_LOOPS, &r4);
 
-	if (getenv("SPLICE")) {
-		start_timing("splice");
+	/*
+	 * Direct splicing was disabled as being immediately available,
+	 * it's reserved for sendfile emulation now.
+	 */
+#if 0
+	start_timing("splice");
 splice_again:
-		sk = socket(PF_INET, SOCK_STREAM, 0);
-		if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
-			return error("connect");
+	sk = socket(PF_INET, SOCK_STREAM, 0);
+	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+		return error("connect");
 
-		fd = open("largefile", O_RDONLY);
-		if (fd < 0)
-			return error("largefile");
+	fd = open("largefile", O_RDONLY);
+	if (fd < 0)
+		return error("largefile");
 
-		i = NR*BUFSIZE;
-		off = 0;
-		do {
-			int flags = BUFSIZE < i ? SPLICE_F_MORE : 0;
-			int ret;
+	i = NR*BUFSIZE;
+	off = 0;
+	do {
+		int flags = BUFSIZE < i ? SPLICE_F_MORE : 0;
+		int ret;
 
-			ret = splice(fd, &off, sk, NULL, min(i, BUFSIZE), flags);
+		ret = splice(fd, &off, sk, NULL, min(i, BUFSIZE), flags);
 
-			if (ret <= 0)
-				return error("splice");
-			i -= ret;
-		} while (i);
+		if (ret <= 0)
+			return error("splice");
+		i -= ret;
+	} while (i);
 
-		close(fd);
-		close(sk);
-		if (--splice_loops)
-			goto splice_again;
-		c3 = end_timing(NR*BUFSIZE*SPLICE_LOOPS, &r5);
-	} else
-		c3 = 0;
+	close(fd);
+	close(sk);
+	if (--splice_loops)
+		goto splice_again;
+	c3 = end_timing(NR*BUFSIZE*SPLICE_LOOPS, &r5);
+#else
+	c3 = 0;
+#endif
 
 	/*
 	 * c1/r3 - sendfile
