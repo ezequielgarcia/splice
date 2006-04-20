@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "splice.h"
 
@@ -57,7 +58,6 @@ int main(int argc, char *argv[])
 	struct sockaddr_in addr;
 	unsigned short port;
 	int fd, pfd[2], ffd, ret;
-	unsigned long long b_sent = 0;
 	int bla = 1;
 
 	if (argc < 4) {
@@ -100,24 +100,20 @@ int main(int argc, char *argv[])
 	gettimeofday(&start_time, NULL);
 
 	do {
-		if (kb_sent >= 128*1024) {
-			b_sent += 40000;
-			ret = ftruncate(ffd, b_sent);
-			printf("trunc file a little %d\n", ret);
-			bla = 0;
-		}
-			
-		ret = splice(ffd, NULL, pfd[1], NULL, SPLICE_SIZE, 0x02);
+		ret = splice(ffd, NULL, pfd[1], NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
 
 		if (!bla)
 			printf("spliced %d\n", ret);
 
-		if (ret < 0)
+		if (ret < 0) {
+			if (errno == EAGAIN) {
+				usleep(100);
+				continue;
+			}
 			return error("splice");
-		else if (!ret) {
+		} else if (!ret)
 			break;
-		}
-		b_sent += ret;
+
 		kb_sent += ret >> 10;
 		iters++;
 		while (ret > 0) {
