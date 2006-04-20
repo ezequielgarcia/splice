@@ -1,6 +1,6 @@
 CC	= gcc
 CFLAGS	= -Wall -O2 -g -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
-PROGS	= ktee splice-cp splice-in splice-out splice-net splice-test4c splice-test4s
+PROGS	= ktee ktee-net splice-cp splice-in splice-out splice-net splice-test4c splice-test4s
 
 all: depend $(PROGS)
 

@@ -1,9 +1,6 @@
 /*
- * A tee implementation using sys_tee. If only one argument is given,
- * stdin output is stored in that file and sent to stdout as well. If a
- * second argument is given, that must be in the form if host:port - in
- * that case, output is stored in file and sent over the network to the
- * given host at given port.
+ * A tee implementation using sys_tee. Stores stdin input in the given file
+ * and duplicates that to stdout.
  */
 #include <stdio.h>
 #include <stdlib.h>
