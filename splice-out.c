@@ -18,18 +18,15 @@ int main(int argc, char *argv[])
 	}
 
 	fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (fd < 0) {
-		perror("open");
-		return 1;
-	}
+	if (fd < 0)
+		return error("open");
 
 	do {
 		int ret = splice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, 0);
 
-		if (ret < 0) {
-			perror("splice");
-			break;
-		} else if (!ret)
+		if (ret < 0)
+			return error("splice");
+		else if (!ret)
 			break;
 	} while (1);
 

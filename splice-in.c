@@ -21,23 +21,18 @@ int main(int argc, char *argv[])
 	}
 
 	fd = open(argv[1], O_RDONLY);
-	if (fd < 0) {
-		perror("open");
-		return 1;
-	}
+	if (fd < 0)
+		return error("open input");
 
-	if (fstat(fd, &sb) < 0) {
-		perror("stat");
-		return 1;
-	}
+	if (fstat(fd, &sb) < 0)
+		return error("stat input");
 
 	do {
 		int ret = splice(fd, NULL, STDOUT_FILENO, NULL, sb.st_size, 0);
 
-		if (ret < 0) {
-			perror("splice");
-			break;
-		} else if (!ret)
+		if (ret < 0)
+			return error("splice");
+		else if (!ret)
 			break;
 
 		sb.st_size -= ret;

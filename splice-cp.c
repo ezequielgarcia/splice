@@ -24,29 +24,21 @@ int main(int argc, char *argv[])
 	}
 
 	in_fd = open(argv[1], O_RDONLY);
-	if (in_fd < 0) {
-		perror("open in");
-		return 1;
-	}
+	if (in_fd < 0)
+		return error("open input");
 
-	if (fstat(in_fd, &sb) < 0) {
-		perror("stat");
-		return 1;
-	}
+	if (fstat(in_fd, &sb) < 0)
+		return error("stat input");
 
 	out_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (out_fd < 0) {
-		perror("open out");
-		return 1;
-	}
+	if (out_fd < 0)
+		return error("open output");
 
-	if (pipe(pfds) < 0) {
-		perror("pipe");
-		return 1;
-	}
+	if (pipe(pfds) < 0)
+		return error("pipe");
 
 	do {
-		int this_len = min(BS, sb.st_size);
+		int this_len = min((off_t) BS, sb.st_size);
 		int ret = splice(in_fd, NULL, pfds[1], NULL, this_len, SPLICE_F_NONBLOCK);
 
 		if (ret <= 0)

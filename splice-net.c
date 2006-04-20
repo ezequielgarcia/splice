@@ -74,10 +74,8 @@ int main(int argc, char *argv[])
 	if (inet_aton(argv[2], &addr.sin_addr) != 1) {
 		struct hostent *hent = gethostbyname(argv[2]);
 
-		if (!hent) {
-			perror("gethostbyname");
-			return 1;
-		}
+		if (!hent)
+			return error("gethostbyname");
 
 		memcpy(&addr.sin_addr, hent->h_addr, 4);
 	}
@@ -85,26 +83,18 @@ int main(int argc, char *argv[])
 	printf("Connecting to %s/%d\n", argv[2], port);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0) {
-		perror("socket");
-		return 1;
-	}
+	if (fd < 0)
+		return error("socket");
 
-	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("connect");
-		return 1;
-	}
+	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		return error("connect");
 
-	if (pipe(pfd) < 0) {
-		perror("pipe");
-		return 1;
-	}
+	if (pipe(pfd) < 0)
+		return error("pipe");
 
 	ffd = open(argv[1], O_RDWR);
-	if (ffd < 0) {
-		perror("open input");
-		return 1;
-	}
+	if (ffd < 0)
+		return error("open input");
 
 	signal(SIGINT, show_rate);
 	gettimeofday(&start_time, NULL);
@@ -122,10 +112,9 @@ int main(int argc, char *argv[])
 		if (!bla)
 			printf("spliced %d\n", ret);
 
-		if (ret < 0) {
-			perror("splice");
-			break;
-		} else if (!ret) {
+		if (ret < 0)
+			return error("splice");
+		else if (!ret) {
 			break;
 		}
 		b_sent += ret;
@@ -134,10 +123,9 @@ int main(int argc, char *argv[])
 		while (ret > 0) {
 			int flags = 0;
 			int written = splice(pfd[0], NULL, fd, NULL, ret, flags);
-			if (written < 0) {
-				perror("splice-out");
-				break;
-			} else if (!written)
+			if (written < 0)
+				return error("splice-out");
+			else if (!written)
 				break;
 			ret -= written;
 		}
