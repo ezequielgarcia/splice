@@ -13,24 +13,49 @@
 
 #define BS	SPLICE_SIZE
 
-int main(int argc, char *argv[])
-{
-	int in_fd, out_fd, pfds[2];
-	struct stat sb;
+static int splice_flags;
 
-	if (argc < 3) {
-		printf("%s: infile outfile\n", argv[0]);
-		return 1;
+static int usage(char *name)
+{
+	fprintf(stderr, "%s: [-m] in_file out_file\n", name);
+	return 1;
+}
+
+static int parse_options(int argc, char *argv[])
+{
+	int c, index = 1;
+
+	while ((c = getopt(argc, argv, "m")) != -1) {
+		switch (c) {
+		case 'm':
+			splice_flags = SPLICE_F_MOVE;
+			index++;
+			break;
+		default:
+			return -1;
+		}
 	}
 
-	in_fd = open(argv[1], O_RDONLY);
+	return index;
+}
+
+int main(int argc, char *argv[])
+{
+	int in_fd, out_fd, pfds[2], index;
+	struct stat sb;
+
+	index = parse_options(argc, argv);
+	if (index == -1 || index + 2 > argc)
+		return usage(argv[0]);
+
+	in_fd = open(argv[index], O_RDONLY);
 	if (in_fd < 0)
 		return error("open input");
 
 	if (fstat(in_fd, &sb) < 0)
 		return error("stat input");
 
-	out_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	out_fd = open(argv[index + 1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (out_fd < 0)
 		return error("open output");
 
@@ -39,14 +64,14 @@ int main(int argc, char *argv[])
 
 	do {
 		int this_len = min((off_t) BS, sb.st_size);
-		int ret = splice(in_fd, NULL, pfds[1], NULL, this_len, SPLICE_F_NONBLOCK);
+		int ret = splice(in_fd, NULL, pfds[1], NULL, this_len, 0);
 
 		if (ret <= 0)
 			return error("splice-in");
 
 		sb.st_size -= ret;
 		while (ret > 0) {
-			int written = splice(pfds[0], NULL, out_fd, NULL, ret, 0);
+			int written = splice(pfds[0], NULL, out_fd, NULL, ret, splice_flags);
 			if (written <= 0)
 				return error("splice-out");
 			ret -= written;
