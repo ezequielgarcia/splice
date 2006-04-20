@@ -1,0 +1,33 @@
+Splice test tools
+-----------------
+
+A small collection of tools that I used during testing of splice. Some
+of them might even be useful outside of that :-)
+
+ktee:		Sort of like tee. It uses sys_tee to avoid moving the data to
+		user space. ktee will sys_tee stdin to stdout, then consume
+		stdin by splicing it to the given file.
+
+ktee-net:	Like ktee, except it splices stdin to a network host.
+
+splice-cp:	Splice input file to output file, basically copying the
+		data. If the -m option is given, pages will be migrated
+		instead of copied.
+
+splice-in:	Splice given file to stdout.
+
+splice-net:	Splice given file to network host.
+
+splice-out:	Splice stdin to given file.
+
+splice-test4c:	Splice/sendfile test client. Use with splice-test4s.
+
+splice-test4s:	Dummy server for splice-test4c.
+
+All tools written by me, except splice-test4c/s which are from Ingo Molnar.
+
+
+
+
+Jens Axboe, 20060420
+
