@@ -20,7 +20,9 @@ splice-net:	Splice given file to network host.
 
 splice-out:	Splice stdin to given file.
 
-splice-test4c:	Splice/sendfile test client. Use with splice-test4s.
+splice-test4c:	Splice/sendfile test client. Use with splice-test4s. There
+		must be a file of at least 128MiB called 'largefile' in the
+		current directory, splice-test4c uses that as input data.
 
 splice-test4s:	Dummy server for splice-test4c.
 
