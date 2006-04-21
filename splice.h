@@ -4,17 +4,26 @@
 #if defined(__i386__)
 #define __NR_splice	313
 #define __NR_tee	315
+#define __NR_vmsplice	316
 #elif defined(__x86_64__)
 #define __NR_splice	275
 #define __NR_tee	276
+#define __NR_vmsplice	278
 #elif defined(__powerpc__) || defined(__powerpc64__)
 #define __NR_splice	283
 #define __NR_tee	284
+#define __NR_vmsplice	285
 #elif defined(__ia64__)
 #define __NR_splice	1297
 #define __NR_tee	1301
+#define __NR_vmsplice	1301
 #else
 #error unsupported arch
+#endif
+
+#ifndef F_SETPSZ
+#define	F_SETPSZ	15
+#define F_GETPSZ	16
 #endif
 
 #define SPLICE_F_MOVE	(0x01)	/* move pages instead of copying */
@@ -33,6 +42,11 @@ static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
 static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
 {
 	return syscall(__NR_tee, fdin, fdout, len, flags);
+}
+
+static inline int vmsplice(int fd, void *buffer, size_t len, unsigned int flags)
+{
+	return syscall(__NR_vmsplice, fd, buffer, len, flags);
 }
 
 #define SPLICE_SIZE	(64*1024)
