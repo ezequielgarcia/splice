@@ -43,6 +43,7 @@ int do_vmsplice(int fd, void *buffer, int len)
 			return error("vmsplice");
 
 		len -= written;
+		buffer += written;
 	}
 
 	return 0;
