@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -77,8 +76,6 @@ int main(int argc, char *argv[])
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
 		return error("socket");
-
-	fprintf(stderr, "connecting to %s, port %x\n", hname, addr.sin_port);
 
 	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 		return error("connect");
