@@ -1,5 +1,5 @@
 /*
- * Splice stdout to file
+ * Splice stdin to file
  */
 #include <stdio.h>
 #include <stdlib.h>
