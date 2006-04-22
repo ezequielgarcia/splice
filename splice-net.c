@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
 	struct sockaddr_in addr;
 	unsigned short port;
 	int fd, pfd[2], ffd, ret;
-	int bla = 1;
 
 	if (argc < 4) {
 		printf("%s: file target port\n", argv[0]);
@@ -101,10 +100,6 @@ int main(int argc, char *argv[])
 
 	do {
 		ret = splice(ffd, NULL, pfd[1], NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
-
-		if (!bla)
-			printf("spliced %d\n", ret);
-
 		if (ret < 0) {
 			if (errno == EAGAIN) {
 				usleep(100);
@@ -125,7 +120,7 @@ int main(int argc, char *argv[])
 				break;
 			ret -= written;
 		}
-	} while (kb_sent < 512 * 1024 && bla);
+	} while (1);
 
 	show_rate(0);
 	close(fd);
