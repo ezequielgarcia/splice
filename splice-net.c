@@ -49,10 +49,10 @@ void show_rate(int sig)
 {
 	unsigned long msecs = mtime_since_now(&start_time);
 
-	if (!msecs)
-		msecs = 1;
-
-	printf("Throughput: %LuMiB/sec (%Lu MiB in %lu msecs)\n", kb_sent / msecs, kb_sent, msecs);
+	if (msecs)
+		printf("Throughput: %LuMiB/sec (%Lu KiB in %lu msecs)\n", kb_sent / msecs, kb_sent, msecs);
+	else
+		printf("Transferred %Lu KiB\n", kb_sent);
 }
 
 int main(int argc, char *argv[])
