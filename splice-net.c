@@ -17,44 +17,6 @@
 
 #include "splice.h"
 
-static struct timeval start_time;
-static unsigned long long kb_sent;
-
-static unsigned long mtime_since(struct timeval *s, struct timeval *e)
-{
-        double sec, usec;
-
-        sec = e->tv_sec - s->tv_sec;
-        usec = e->tv_usec - s->tv_usec;
-        if (sec > 0 && usec < 0) {
-                sec--;
-                usec += 1000000;
-        }
-
-        sec *= (double) 1000;
-        usec /= (double) 1000;
-
-        return sec + usec;
-}
-
-static unsigned long mtime_since_now(struct timeval *s)
-{
-        struct timeval t;
-
-        gettimeofday(&t, NULL);
-        return mtime_since(s, &t);
-}
-
-void show_rate(int sig)
-{
-	unsigned long msecs = mtime_since_now(&start_time);
-
-	if (msecs)
-		printf("Throughput: %LuMiB/sec (%Lu KiB in %lu msecs)\n", kb_sent / msecs, kb_sent, msecs);
-	else
-		printf("Transferred %Lu KiB\n", kb_sent);
-}
-
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
@@ -98,9 +60,6 @@ int main(int argc, char *argv[])
 	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 		return error("connect");
 
-	signal(SIGINT, show_rate);
-	gettimeofday(&start_time, NULL);
-
 	do {
 		ret = splice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
 		if (ret < 0) {
@@ -111,11 +70,8 @@ int main(int argc, char *argv[])
 			return error("splice");
 		} else if (!ret)
 			break;
-
-		kb_sent += ret >> 10;
 	} while (1);
 
-	show_rate(0);
 	close(fd);
 	return 0;
 }
