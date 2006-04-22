@@ -12,13 +12,13 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 #include "splice.h"
 
 static struct timeval start_time;
 static unsigned long long kb_sent;
-static unsigned long iters;
 
 static unsigned long mtime_since(struct timeval *s, struct timeval *e)
 {
@@ -49,29 +49,39 @@ void show_rate(int sig)
 {
 	unsigned long msecs = mtime_since_now(&start_time);
 
+	if (!msecs)
+		msecs = 1;
+
 	printf("Throughput: %LuMiB/sec (%Lu MiB in %lu msecs)\n", kb_sent / msecs, kb_sent, msecs);
-	printf("avg put: %Lu\n", kb_sent / iters);
 }
 
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
 	unsigned short port;
-	int fd, pfd[2], ffd, ret;
+	int fd, ret;
+	struct stat sb;
 
-	if (argc < 4) {
-		printf("%s: file target port\n", argv[0]);
+	if (argc < 3) {
+		printf("%s: target port\n", argv[0]);
 		return 1;
 	}
 
-	port = atoi(argv[3]);
+	if (fstat(STDIN_FILENO, &sb) < 0)
+		return error("stat");
+	if (!S_ISFIFO(sb.st_mode)) {
+		fprintf(stderr, "stdin must be a pipe\n");
+		return 1;
+	}
+
+	port = atoi(argv[2]);
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 
-	if (inet_aton(argv[2], &addr.sin_addr) != 1) {
-		struct hostent *hent = gethostbyname(argv[2]);
+	if (inet_aton(argv[1], &addr.sin_addr) != 1) {
+		struct hostent *hent = gethostbyname(argv[1]);
 
 		if (!hent)
 			return error("gethostbyname");
@@ -79,7 +89,7 @@ int main(int argc, char *argv[])
 		memcpy(&addr.sin_addr, hent->h_addr, 4);
 	}
 
-	printf("Connecting to %s/%d\n", argv[2], port);
+	printf("Connecting to %s/%d\n", argv[1], port);
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
@@ -88,18 +98,11 @@ int main(int argc, char *argv[])
 	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 		return error("connect");
 
-	if (pipe(pfd) < 0)
-		return error("pipe");
-
-	ffd = open(argv[1], O_RDWR);
-	if (ffd < 0)
-		return error("open input");
-
 	signal(SIGINT, show_rate);
 	gettimeofday(&start_time, NULL);
 
 	do {
-		ret = splice(ffd, NULL, pfd[1], NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
+		ret = splice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
 		if (ret < 0) {
 			if (errno == EAGAIN) {
 				usleep(100);
@@ -110,16 +113,6 @@ int main(int argc, char *argv[])
 			break;
 
 		kb_sent += ret >> 10;
-		iters++;
-		while (ret > 0) {
-			int flags = 0;
-			int written = splice(pfd[0], NULL, fd, NULL, ret, flags);
-			if (written < 0)
-				return error("splice-out");
-			else if (!written)
-				break;
-			ret -= written;
-		}
 	} while (1);
 
 	show_rate(0);
