@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <string.h>
+#include <getopt.h>
 #include <sys/poll.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -22,6 +24,8 @@
 #define ALIGN_MASK	(0)
 #define ALIGN(buf)	(buf)
 #endif
+
+static int do_clear;
 
 int do_vmsplice(int fd, void *buffer, int len)
 {
@@ -49,12 +53,39 @@ int do_vmsplice(int fd, void *buffer, int len)
 	return 0;
 }
 
+static int usage(char *name)
+{
+	fprintf(stderr, "%s: [-c]\n", name);
+	return 1;
+}
+
+static int parse_options(int argc, char *argv[])
+{
+	int c, index = 1;
+
+	while ((c = getopt(argc, argv, "m")) != -1) {
+		switch (c) {
+		case 'c':
+			do_clear = 1;
+			index++;
+			break;
+		default:
+			return -1;
+		}
+	}
+
+	return index;
+}
+
 int main(int argc, char *argv[])
 {
 	unsigned char *buffer;
 	struct stat sb;
 	long page_size;
 	int i, ret;
+
+	if (parse_options(argc, argv) < 0)
+		return usage(argv[0]);
 
 	if (fstat(STDOUT_FILENO, &sb) < 0)
 		return error("stat");
@@ -100,6 +131,14 @@ int main(int argc, char *argv[])
 		 * the buffer, but we do now know that all parts of the first
 		 * half have been consumed from the pipe - so we can reuse that.
 		 */
+
+		/*
+		 * Test option - clear the first half of the buffer, should
+		 * be safe now
+		 */
+		if (do_clear)
+			memset(buffer, 0x00, SPLICE_SIZE);
+			
 	} while (0);
 
 	return 0;
