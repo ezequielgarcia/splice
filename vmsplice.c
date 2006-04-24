@@ -63,7 +63,7 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "m")) != -1) {
+	while ((c = getopt(argc, argv, "c")) != -1) {
 		switch (c) {
 		case 'c':
 			do_clear = 1;
