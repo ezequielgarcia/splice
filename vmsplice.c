@@ -33,6 +33,11 @@ int do_vmsplice(int fd, void *buffer, int len)
 	int written;
 
 	while (len) {
+		struct iovec iov = {
+			.iov_base = buffer,
+			.iov_len = min(SPLICE_SIZE, len),
+		};
+
 		/*
 		 * in a real app you'd be more clever with poll of course,
 		 * here we are basically just blocking on output room and
@@ -41,7 +46,7 @@ int do_vmsplice(int fd, void *buffer, int len)
 		if (poll(&pfd, 1, -1) < 0)
 			return error("poll");
 
-		written = vmsplice(fd, buffer, min(SPLICE_SIZE, len), 0);
+		written = vmsplice(fd, &iov, 1, 0);
 
 		if (written <= 0)
 			return error("vmsplice");

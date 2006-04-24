@@ -1,6 +1,8 @@
 #ifndef SPLICE_H
 #define SPLICE_H
 
+#include <sys/uio.h>
+
 #if defined(__i386__)
 #define __NR_splice	313
 #define __NR_tee	315
@@ -44,9 +46,10 @@ static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
 	return syscall(__NR_tee, fdin, fdout, len, flags);
 }
 
-static inline int vmsplice(int fd, void *buffer, size_t len, unsigned int flags)
+static inline int vmsplice(int fd, const struct iovec *iov,
+			   unsigned long nr_segs, unsigned int flags)
 {
-	return syscall(__NR_vmsplice, fd, buffer, len, flags);
+	return syscall(__NR_vmsplice, fd, iov, nr_segs, flags);
 }
 
 #define SPLICE_SIZE	(64*1024)
