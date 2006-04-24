@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <string.h>
 #include <getopt.h>
@@ -86,8 +85,7 @@ int main(int argc, char *argv[])
 {
 	unsigned char *buffer;
 	struct stat sb;
-	long page_size;
-	int i, ret;
+	int i;
 
 	if (parse_options(argc, argv) < 0)
 		return usage(argv[0]);
@@ -98,16 +96,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "stdout must be a pipe\n");
 		return 1;
 	}
-
-	ret = fcntl(STDOUT_FILENO, F_GETPSZ);
-	if (ret < 0)
-		return error("F_GETPSZ");
-
-	page_size = sysconf(_SC_PAGESIZE);
-	if (page_size < 0)
-		return error("_SC_PAGESIZE");
-
-	fprintf(stderr, "Pipe size: %d pages / %ld bytes\n", ret, ret * page_size);
 
 	buffer = ALIGN(malloc(2 * SPLICE_SIZE + ALIGN_MASK));
 	for (i = 0; i < 2 * SPLICE_SIZE; i++)
