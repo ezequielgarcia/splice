@@ -14,29 +14,27 @@
 
 #include "splice.h"
 
-#define ALIGN_BUF
-
-#ifdef ALIGN_BUF
-#define ALIGN_MASK	(65535)	/* 64k-1, should just be PAGE_SIZE - 1 */
-#define ALIGN(buf)	(void *) (((unsigned long) (buf) + ALIGN_MASK) & ~ALIGN_MASK)
-#else
-#define ALIGN_MASK	(0)
-#define ALIGN(buf)	(buf)
-#endif
+#define ALIGN(buf)	(void *) (((unsigned long) (buf) + align_mask) & ~align_mask)
 
 static int do_clear;
+static int align_mask = 65535;
 
-int do_vmsplice(int fd, void *buffer, int len)
+int do_vmsplice(int fd, void *b1, void *b2, int len)
 {
 	struct pollfd pfd = { .fd = fd, .events = POLLOUT, };
-	int written;
+	struct iovec iov[] = {
+		{
+			.iov_base = b1,
+			.iov_len = len / 2,
+		},
+		{
+			.iov_base = b2,
+			.iov_len = len / 2,
+		},
+	};
+	int written, idx = 0;
 
 	while (len) {
-		struct iovec iov = {
-			.iov_base = buffer,
-			.iov_len = min(SPLICE_SIZE, len),
-		};
-
 		/*
 		 * in a real app you'd be more clever with poll of course,
 		 * here we are basically just blocking on output room and
@@ -45,13 +43,22 @@ int do_vmsplice(int fd, void *buffer, int len)
 		if (poll(&pfd, 1, -1) < 0)
 			return error("poll");
 
-		written = vmsplice(fd, &iov, 1, 0);
+		written = vmsplice(fd, &iov[idx], 2 - idx, 0);
 
 		if (written <= 0)
 			return error("vmsplice");
 
 		len -= written;
-		buffer += written;
+		if (written >= iov[idx].iov_len) {
+			int extra = written - iov[idx].iov_len;
+
+			idx++;
+			iov[idx].iov_len -= extra;
+			iov[idx].iov_base += extra;
+		} else {
+			iov[idx].iov_len -= written;
+			iov[idx].iov_base += written;
+		}
 	}
 
 	return 0;
@@ -59,7 +66,7 @@ int do_vmsplice(int fd, void *buffer, int len)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-c]\n", name);
+	fprintf(stderr, "%s: [-c(lear)] [-u(nalign)\n", name);
 	return 1;
 }
 
@@ -67,10 +74,14 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "c")) != -1) {
+	while ((c = getopt(argc, argv, "cu")) != -1) {
 		switch (c) {
 		case 'c':
 			do_clear = 1;
+			index++;
+			break;
+		case 'u':
+			align_mask = 0;
 			index++;
 			break;
 		default:
@@ -83,9 +94,8 @@ static int parse_options(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-	unsigned char *buffer;
+	unsigned char *b1, *b2;
 	struct stat sb;
-	int i;
 
 	if (parse_options(argc, argv) < 0)
 		return usage(argv[0]);
@@ -97,15 +107,19 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	buffer = ALIGN(malloc(2 * SPLICE_SIZE + ALIGN_MASK));
-	for (i = 0; i < 2 * SPLICE_SIZE; i++)
-		buffer[i] = (i & 0xff);
+	b1 = ALIGN(malloc(SPLICE_SIZE + align_mask));
+	b2 = ALIGN(malloc(SPLICE_SIZE + align_mask));
+
+	memset(b1, 0xaa, SPLICE_SIZE);
+	memset(b2, 0xbb, SPLICE_SIZE);
 
 	do {
+		int half = SPLICE_SIZE / 2;
+
 		/*
 		 * vmsplice the first half of the buffer into the pipe
 		 */
-		if (do_vmsplice(STDOUT_FILENO, buffer, SPLICE_SIZE))
+		if (do_vmsplice(STDOUT_FILENO, b1, b2, SPLICE_SIZE))
 			break;
 
 		/*
@@ -116,7 +130,7 @@ int main(int argc, char *argv[])
 		/*
 		 * vmsplice second half
 		 */
-		if (do_vmsplice(STDOUT_FILENO, buffer + SPLICE_SIZE, SPLICE_SIZE))
+		if (do_vmsplice(STDOUT_FILENO, b1 + half, b2 + half, SPLICE_SIZE))
 			break;
 
 		/*
@@ -129,9 +143,10 @@ int main(int argc, char *argv[])
 		 * Test option - clear the first half of the buffer, should
 		 * be safe now
 		 */
-		if (do_clear)
-			memset(buffer, 0x00, SPLICE_SIZE);
-			
+		if (do_clear) {
+			memset(b1, 0x00, SPLICE_SIZE);
+			memset(b2, 0x00, SPLICE_SIZE);
+		}
 	} while (0);
 
 	return 0;
