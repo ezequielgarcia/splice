@@ -19,7 +19,7 @@
 #elif defined(__ia64__)
 #define __NR_splice	1297
 #define __NR_tee	1301
-#define __NR_vmsplice	1301
+#define __NR_vmsplice	1302
 #else
 #error unsupported arch
 #endif
