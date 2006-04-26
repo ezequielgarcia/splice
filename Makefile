@@ -13,6 +13,14 @@ depend:
 clean:
 	-rm -f *.o $(PROGS) .depend
 
+INSTALL = install
+prefix = /usr/local
+bindir = $(prefix)/bin
+
+install: $(PROGS)
+	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
+	$(INSTALL) $(PROGS) $(DESTDIR)$(bindir)
+
 ifneq ($(wildcard .depend),)
 include .depend
 endif
