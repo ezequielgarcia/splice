@@ -24,11 +24,6 @@
 #error unsupported arch
 #endif
 
-#ifndef F_SETPSZ
-#define	F_SETPSZ	15
-#define F_GETPSZ	16
-#endif
-
 #define SPLICE_F_MOVE	(0x01)	/* move pages instead of copying */
 #define SPLICE_F_NONBLOCK (0x02) /* don't block on the pipe splicing (but */
 				 /* we may still block on the fd we splice */
@@ -39,7 +34,6 @@ static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
 			 size_t len, unsigned long flags)
 {
 	return syscall(__NR_splice, fdin, off_in, fdout, off_out, len, flags);
-
 }
 
 static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
