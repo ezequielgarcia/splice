@@ -26,6 +26,8 @@ splice-test4c:	Splice/sendfile test client. Use with splice-test4s. There
 
 splice-test4s:	Dummy server for splice-test4c.
 
+splice-bench:	Test various sides of splice performance.
+
 All tools written by me, except splice-test4c/s which are from Ingo Molnar.
 
 
