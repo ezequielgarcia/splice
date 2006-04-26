@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "splice.h"
 
@@ -12,7 +13,7 @@ static int splice_flags;
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-m] out_file\n", name);
+	fprintf(stderr, "... | %s: [-m] out_file\n", name);
 	return 1;
 }
 
@@ -36,7 +37,15 @@ static int parse_options(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+	struct stat sb;
 	int fd, index;
+
+	if (fstat(STDIN_FILENO, &sb) < 0)
+		return error("stat");
+	if (!S_ISFIFO(sb.st_mode)) {
+		fprintf(stderr, "stdin must be a pipe\n");
+		return usage(argv[0]);
+	}
 
 	index = parse_options(argc, argv);
 	if (index == -1 || index + 1 > argc)

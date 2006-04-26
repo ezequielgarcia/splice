@@ -66,7 +66,7 @@ int do_vmsplice(int fd, void *b1, void *b2, int len)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-c(lear)] [-u(nalign)\n", name);
+	fprintf(stderr, "%s: [-c(lear)] [-u(nalign)] | ...\n", name);
 	return 1;
 }
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 		return error("stat");
 	if (!S_ISFIFO(sb.st_mode)) {
 		fprintf(stderr, "stdout must be a pipe\n");
-		return 1;
+		return usage(argv[0]);
 	}
 
 	b1 = ALIGN(malloc(SPLICE_SIZE + align_mask));

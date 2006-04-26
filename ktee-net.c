@@ -33,7 +33,7 @@ static int do_splice(int infd, int outfd, unsigned int len, char *msg)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: hostname:port\n", name);
+	fprintf(stderr, "... | %s: hostname:port\n", name);
 	return 1;
 }
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 		return error("stat");
 	if (!S_ISFIFO(sb.st_mode)) {
 		fprintf(stderr, "stdin must be a pipe\n");
-		return 1;
+		return usage(argv[0]);
 	}
 
 	hname = strdup(argv[1]);

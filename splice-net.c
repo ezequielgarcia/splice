@@ -17,6 +17,12 @@
 
 #include "splice.h"
 
+static int usage(char *name)
+{
+	fprintf(stderr, "%s: target port\n", name);
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
@@ -24,16 +30,14 @@ int main(int argc, char *argv[])
 	int fd, ret;
 	struct stat sb;
 
-	if (argc < 3) {
-		printf("%s: target port\n", argv[0]);
-		return 1;
-	}
+	if (argc < 3)
+		return usage(argv[0]);
 
 	if (fstat(STDIN_FILENO, &sb) < 0)
 		return error("stat");
 	if (!S_ISFIFO(sb.st_mode)) {
 		fprintf(stderr, "stdin must be a pipe\n");
-		return 1;
+		return usage(argv[0]);
 	}
 
 	port = atoi(argv[2]);

@@ -10,14 +10,25 @@
 
 #include "splice.h"
 
+static int usage(char *name)
+{
+	fprintf(stderr, "%s: infile | ...\n", name);
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
 	struct stat sb;
 	int fd;
 
-	if (argc < 2) {
-		printf("%s: infile\n", argv[0]);
-		return 1;
+	if (argc < 2)
+		return usage(argv[0]);
+
+	if (fstat(STDOUT_FILENO, &sb) < 0)
+		return error("stat");
+	if (!S_ISFIFO(sb.st_mode)) {
+		fprintf(stderr, "stdout must be a pipe\n");
+		return usage(argv[0]);
 	}
 
 	fd = open(argv[1], O_RDONLY);
