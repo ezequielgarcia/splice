@@ -309,18 +309,20 @@ static void setup_shared_var(void)
 
 #define SCHED_BATCH 3
 
-#ifdef __ia64__
-# define rdtscll(val)					\
-do {							\
-	val = *__mm_clock_dev;				\
-} while (0)
-#elif defined(__i386__)
-# define rdtscll(val)					\
+#if defined(__i386__)
+#define rdtscll(val)					\
 do {							\
 	__asm__ __volatile__("rdtsc" : "=A" (val));	\
 } while (0)
+#if 0
+#elif defined(__ia64__)
+#define rdtscll(val)					\
+do {							\
+	val = *__mm_clock_dev;				\
+} while (0)
+#endif
 #else
-# define rdtscll(val) \
+#define rdtscll(val) \
 	do { (val) = 0LL; } while (0)
 #endif
 
