@@ -2,6 +2,7 @@
 #define SPLICE_H
 
 #include <sys/uio.h>
+#include <sys/stat.h>
 
 #if defined(__i386__)
 #define __NR_splice	313
@@ -72,6 +73,36 @@ static inline int error(const char *n)
 {
 	perror(n);
 	return -1;
+}
+
+static int __check_pipe(int pfd)
+{
+	struct stat sb;
+
+	if (fstat(pfd, &sb) < 0)
+		return error("stat");
+	if (!S_ISFIFO(sb.st_mode))
+		return 1;
+
+	return 0;
+}
+
+static inline int check_input_pipe(void)
+{
+	if (!__check_pipe(STDIN_FILENO))
+		return 0;
+
+	fprintf(stderr, "stdin must be a pipe\n");
+	return 1;
+}
+
+static inline int check_output_pipe(void)
+{
+	if (!__check_pipe(STDOUT_FILENO))
+		return 0;
+
+	fprintf(stderr, "stdout must be a pipe\n");
+	return 1;
 }
 
 #endif

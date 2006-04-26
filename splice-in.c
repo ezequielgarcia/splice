@@ -24,12 +24,8 @@ int main(int argc, char *argv[])
 	if (argc < 2)
 		return usage(argv[0]);
 
-	if (fstat(STDOUT_FILENO, &sb) < 0)
-		return error("stat");
-	if (!S_ISFIFO(sb.st_mode)) {
-		fprintf(stderr, "stdout must be a pipe\n");
+	if (check_output_pipe())
 		return usage(argv[0]);
-	}
 
 	fd = open(argv[1], O_RDONLY);
 	if (fd < 0)

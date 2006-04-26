@@ -9,7 +9,6 @@
 #include <string.h>
 #include <getopt.h>
 #include <sys/poll.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "splice.h"
@@ -95,17 +94,12 @@ static int parse_options(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	unsigned char *b1, *b2;
-	struct stat sb;
 
 	if (parse_options(argc, argv) < 0)
 		return usage(argv[0]);
 
-	if (fstat(STDOUT_FILENO, &sb) < 0)
-		return error("stat");
-	if (!S_ISFIFO(sb.st_mode)) {
-		fprintf(stderr, "stdout must be a pipe\n");
+	if (check_output_pipe())
 		return usage(argv[0]);
-	}
 
 	b1 = ALIGN(malloc(SPLICE_SIZE + align_mask));
 	b2 = ALIGN(malloc(SPLICE_SIZE + align_mask));

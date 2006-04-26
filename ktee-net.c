@@ -10,7 +10,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <limits.h>
@@ -41,18 +40,13 @@ int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
 	char *p, *hname;
-	struct stat sb;
 	int fd;
 
 	if (argc < 2)
 		return usage(argv[0]);
 
-	if (fstat(STDIN_FILENO, &sb) < 0)
-		return error("stat");
-	if (!S_ISFIFO(sb.st_mode)) {
-		fprintf(stderr, "stdin must be a pipe\n");
+	if (check_input_pipe())
 		return usage(argv[0]);
-	}
 
 	hname = strdup(argv[1]);
 	p = strstr(hname, ":");

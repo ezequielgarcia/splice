@@ -12,7 +12,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <sys/time.h>
-#include <sys/stat.h>
 #include <errno.h>
 
 #include "splice.h"
@@ -28,17 +27,12 @@ int main(int argc, char *argv[])
 	struct sockaddr_in addr;
 	unsigned short port;
 	int fd, ret;
-	struct stat sb;
 
 	if (argc < 3)
 		return usage(argv[0]);
 
-	if (fstat(STDIN_FILENO, &sb) < 0)
-		return error("stat");
-	if (!S_ISFIFO(sb.st_mode)) {
-		fprintf(stderr, "stdin must be a pipe\n");
+	if (check_input_pipe())
 		return usage(argv[0]);
-	}
 
 	port = atoi(argv[2]);
 
