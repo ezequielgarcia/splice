@@ -234,7 +234,7 @@ again:
 	size = sb.st_size >> 10;
 	size *= client_loops;
 	msecs = mtime_since_now(&start);
-	fprintf(stdout, "Client%d: %Lu MiB/sec\n", offset, size / msecs);
+	fprintf(stdout, "Client%d: %Lu MiB/sec\n", offset, size / (unsigned long long) msecs);
 	return 0;
 }
 
