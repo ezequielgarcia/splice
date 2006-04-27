@@ -372,12 +372,23 @@ int client_splice(int out_fd, int file_fd, int offset)
 
 int do_client(int out_fd, int file_fd, int offset)
 {
-	if (run_splice)
-		client_splice(out_fd, file_fd, offset);
-	if (run_mmap)
-		client_mmap(out_fd, file_fd, offset);
-	if (run_rw)
-		client_rw(out_fd, file_fd, offset);
+	int ret;
+
+	if (run_splice) {
+		ret = client_splice(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
+	if (run_mmap) {
+		ret = client_mmap(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
+	if (run_rw) {
+		ret = client_rw(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
 	return 0;
 }
 
