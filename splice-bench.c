@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
+#include <sys/mman.h>
 #include <signal.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -27,6 +28,10 @@ static int write_to_null;
 static int same_file;
 static int splice_size = SPLICE_SIZE;
 static char *filename = "splice-file";
+static int max_client_run = 15;
+static int run_rw = 1;
+static int run_splice = 1;
+static int run_mmap = 1;
 
 static int nr_cpus;
 
@@ -40,6 +45,8 @@ static int usage(char *name)
 	fprintf(stderr, "\t[-s] (use 1 file for all)\n");
 	fprintf(stderr, "\t[-a] (set CPU affinity)\n");
 	fprintf(stderr, "\t[-b] (splice chunk size)\n");
+	fprintf(stderr, "\t[-t] (max client runtime in seconds)\n");
+	fprintf(stderr, "\t[-c] (clients to run (rw/mmap/splice)\n");
 	return 1;
 }
 
@@ -47,7 +54,7 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "n:p:l:azsb:")) != -1) {
+	while ((c = getopt(argc, argv, "n:p:l:azsb:t:c:")) != -1) {
 		switch (c) {
 		case 'n':
 			nr_clients = atoi(optarg);
@@ -75,6 +82,19 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'b':
 			splice_size = atoi(optarg);
+			index++;
+			break;
+		case 't':
+			max_client_run = atoi(optarg);
+			index++;
+			break;
+		case 'c':
+			if (!strstr(optarg, "rw"))
+				run_rw = 0;
+			if (!strstr(optarg, "splice"))
+				run_splice = 0;
+			if (!strstr(optarg, "mmap"))
+				run_mmap = 0;
 			index++;
 			break;
 		default:
@@ -192,7 +212,105 @@ static unsigned long mtime_since_now(struct timeval *s)
 	return mtime_since(s, &t);
 }
 
-int client_loop(int out_fd, int fd, int *pfd, int offset)
+int client_rw(int out_fd, int file_fd, int offset)
+{
+	int loops = client_loops;
+	struct timeval start;
+	struct stat sb;
+	char *buf;
+	unsigned long long size;
+	unsigned long msecs;
+
+	if (fstat(file_fd, &sb) < 0)
+		return error("fstat");
+
+	buf = malloc(splice_size);
+
+	gettimeofday(&start, NULL);
+again:
+	if (lseek(file_fd, 0, SEEK_SET) < 0)
+		return error("lseek");
+
+	size = sb.st_size;
+	while (size) {
+		int this_len = min(size, (unsigned long long) splice_size);
+		int ret = read(file_fd, buf, this_len);
+
+		if (ret < 0)
+			return error("read");
+
+		size -= ret;
+		while (ret) {
+			int written = write(out_fd, buf, ret);
+
+			if (written < 0)
+				return error("write");
+
+			ret -= written;
+		}
+	}
+
+	loops--;
+
+	if ((mtime_since_now(&start) < max_client_run * 1000) && loops)
+		goto again;
+
+	size = sb.st_size >> 10;
+	size *= (client_loops - loops);
+	msecs = mtime_since_now(&start);
+	fprintf(stdout, "Client%d (rw): %Lu MiB/sec (%LuMiB in %lu msecs)\n", offset, size / (unsigned long long) msecs, size >> 10, msecs);
+	return 0;
+}
+
+int client_mmap(int out_fd, int file_fd, int offset)
+{
+	int loops = client_loops;
+	struct timeval start;
+	struct stat sb;
+	void *mmap_area, *buf;
+	unsigned long long size;
+	unsigned long msecs;
+
+	if (fstat(file_fd, &sb) < 0)
+		return error("fstat");
+
+	mmap_area = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, file_fd, 0);
+	if (mmap_area == MAP_FAILED)
+		return error("mmap");
+
+	if (madvise(mmap_area, sb.st_size, MADV_WILLNEED) < 0)
+		return error("madvise");
+
+	gettimeofday(&start, NULL);
+again:
+	buf = mmap_area;
+	size = sb.st_size;
+	while (size) {
+		int this_len = min(size, (unsigned long long) splice_size);
+		int ret = write(out_fd, buf, this_len);
+
+		if (ret < 0)
+			return error("write");
+
+		buf += ret;
+		size -= ret;
+	}
+
+	loops--;
+
+	if ((mtime_since_now(&start) < max_client_run * 1000) && loops)
+		goto again;
+
+	size = sb.st_size >> 10;
+	size *= (client_loops - loops);
+	msecs = mtime_since_now(&start);
+	fprintf(stdout, "Client%d (mmap): %Lu MiB/sec (%LuMiB in %lu msecs)\n", offset, size / (unsigned long long) msecs, size >> 10, msecs);
+	munmap(mmap_area, sb.st_size);
+	return 0;
+
+}
+
+int client_splice_loop(int out_fd, int fd, int *pfd, int offset)
 {
 	struct timeval start;
 	unsigned long long size;
@@ -205,7 +323,6 @@ int client_loop(int out_fd, int fd, int *pfd, int offset)
 		return error("fstat");
 
 	gettimeofday(&start, NULL);
-
 again:
 	size = sb.st_size;
 	off = 0;
@@ -228,13 +345,39 @@ again:
 		}
 	} while (size);
 
-	if (--loops)
+	loops--;
+
+	if ((mtime_since_now(&start) < max_client_run * 1000) && loops)
 		goto again;
 
 	size = sb.st_size >> 10;
-	size *= client_loops;
+	size *= (client_loops - loops);
 	msecs = mtime_since_now(&start);
-	fprintf(stdout, "Client%d: %Lu MiB/sec\n", offset, size / (unsigned long long) msecs);
+	fprintf(stdout, "Client%d (splice): %Lu MiB/sec (%LuMiB in %lu msecs)\n", offset, size / (unsigned long long) msecs, size >> 10, msecs);
+	return 0;
+}
+
+int client_splice(int out_fd, int file_fd, int offset)
+{
+	int pfd[2], ret;
+
+	if (pipe(pfd) < 0)
+		return error("pipe");
+	
+	ret = client_splice_loop(out_fd, file_fd, pfd, offset);
+	close(pfd[0]);
+	close(pfd[1]);
+	return ret;
+}
+
+int do_client(int out_fd, int file_fd, int offset)
+{
+	if (run_splice)
+		client_splice(out_fd, file_fd, offset);
+	if (run_mmap)
+		client_mmap(out_fd, file_fd, offset);
+	if (run_rw)
+		client_rw(out_fd, file_fd, offset);
 	return 0;
 }
 
@@ -263,7 +406,6 @@ int client(int offset)
 {
 	int file_fd, out_fd;
 	char fname[64];
-	int pfd[2];
 
 	bind_to_cpu(offset);
 	nice(-20);
@@ -277,14 +419,11 @@ int client(int offset)
 		return error("socket");
 
 	sprintf(fname, "%s%d", filename, same_file ? 0 : offset);
-	file_fd = open(filename, O_RDONLY);
+	file_fd = open(fname, O_RDONLY);
 	if (file_fd < 0)
 		return error("open");
 
-	if (pipe(pfd) < 0)
-		return error("pipe");
-	
-	return client_loop(out_fd, file_fd, pfd, offset);
+	return do_client(out_fd, file_fd, offset);
 }
 
 int main(int argc, char *argv[])
@@ -307,8 +446,6 @@ int main(int argc, char *argv[])
 	nr_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if (nr_cpus < 0)
 		return error("_SC_NPROCESSORS_ONLN");
-
-	fprintf(stdout,"Processors: %d\n", nr_cpus);
 
 	/*
 	 * fork servers
