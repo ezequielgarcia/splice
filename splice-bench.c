@@ -105,7 +105,7 @@ static int parse_options(int argc, char *argv[])
 	return index;
 }
 
-int bind_to_cpu(int index)
+static int bind_to_cpu(int index)
 {
 	cpu_set_t cpu_mask;
 	pid_t pid;
@@ -126,9 +126,8 @@ int bind_to_cpu(int index)
 	return 0;
 }
 
-int accept_loop(int listen_sk)
+static int accept_loop(int listen_sk)
 {
-	unsigned long received;
 	struct sockaddr addr;
 	unsigned int len = sizeof(addr);
 	int sk;
@@ -139,14 +138,11 @@ again:
 		return error("accept");
 
 	/* read forever */
-	received = 0;
 	for (;;) {
 		int ret = recv(sk, NULL, 128*1024*1024, MSG_TRUNC);
-		if (ret > 0) {
-			received += ret;
+		if (ret > 0)
 			continue;
-		}
-		if (!ret)
+		else if (!ret)
 			break;
 		if (errno == EAGAIN || errno == EINTR)
 			continue;
@@ -157,10 +153,10 @@ again:
 	goto again;
 }
 
-int server(int offset)
+static int server(int offset)
 {
-	struct sockaddr addr;
 	struct sockaddr_in saddr_in;
+	struct sockaddr addr;
 	unsigned int len;
 	int sk;
 
@@ -212,7 +208,7 @@ static unsigned long mtime_since_now(struct timeval *s)
 	return mtime_since(s, &t);
 }
 
-int client_rw(int out_fd, int file_fd, int offset)
+static int client_rw(int out_fd, int file_fd, int offset)
 {
 	int loops = client_loops;
 	struct timeval start;
@@ -255,6 +251,7 @@ again:
 	if ((mtime_since_now(&start) < max_client_run * 1000) && loops)
 		goto again;
 
+	free(buf);
 	size = sb.st_size >> 10;
 	size *= (client_loops - loops);
 	msecs = mtime_since_now(&start);
@@ -262,7 +259,7 @@ again:
 	return 0;
 }
 
-int client_mmap(int out_fd, int file_fd, int offset)
+static int client_mmap(int out_fd, int file_fd, int offset)
 {
 	int loops = client_loops;
 	struct timeval start;
@@ -310,7 +307,7 @@ again:
 
 }
 
-int client_splice_loop(int out_fd, int fd, int *pfd, int offset)
+static int client_splice_loop(int out_fd, int fd, int *pfd, int offset)
 {
 	struct timeval start;
 	unsigned long long size;
@@ -357,7 +354,7 @@ again:
 	return 0;
 }
 
-int client_splice(int out_fd, int file_fd, int offset)
+static int client_splice(int out_fd, int file_fd, int offset)
 {
 	int pfd[2], ret;
 
@@ -370,14 +367,25 @@ int client_splice(int out_fd, int file_fd, int offset)
 	return ret;
 }
 
-int do_client(int out_fd, int file_fd, int offset)
+static int do_client(int out_fd, int file_fd, int offset)
 {
-	if (run_splice)
-		client_splice(out_fd, file_fd, offset);
-	if (run_mmap)
-		client_mmap(out_fd, file_fd, offset);
-	if (run_rw)
-		client_rw(out_fd, file_fd, offset);
+	int ret;
+
+	if (run_splice) {
+		ret = client_splice(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
+	if (run_mmap) {
+		ret = client_mmap(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
+	if (run_rw) {
+		ret = client_rw(out_fd, file_fd, offset);
+		if (ret)
+			return ret;
+	}
 	return 0;
 }
 
@@ -402,7 +410,7 @@ static int client_open_net(int offset)
 	return sk;
 }
 
-int client(int offset)
+static int client(int offset)
 {
 	int file_fd, out_fd;
 	char fname[64];
