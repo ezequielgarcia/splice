@@ -17,6 +17,8 @@
 
 static int do_clear;
 static int align_mask = 65535;
+static int force_unalign;
+static int splice_flags;
 
 int do_vmsplice(int fd, void *b1, void *b2, int len)
 {
@@ -42,7 +44,7 @@ int do_vmsplice(int fd, void *b1, void *b2, int len)
 		if (poll(&pfd, 1, -1) < 0)
 			return error("poll");
 
-		written = vmsplice(fd, &iov[idx], 2 - idx, 0);
+		written = vmsplice(fd, &iov[idx], 2 - idx, splice_flags);
 
 		if (written <= 0)
 			return error("vmsplice");
@@ -65,7 +67,7 @@ int do_vmsplice(int fd, void *b1, void *b2, int len)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-c(lear)] [-u(nalign)] | ...\n", name);
+	fprintf(stderr, "%s: [-c(lear)] [-u(nalign)] [-g(ift)]| ...\n", name);
 	return 1;
 }
 
@@ -73,14 +75,18 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "cu")) != -1) {
+	while ((c = getopt(argc, argv, "cug")) != -1) {
 		switch (c) {
 		case 'c':
 			do_clear = 1;
 			index++;
 			break;
 		case 'u':
-			align_mask = 0;
+			force_unalign = 1;
+			index++;
+			break;
+		case 'g':
+			splice_flags = SPLICE_F_GIFT;
 			index++;
 			break;
 		default:
@@ -103,6 +109,11 @@ int main(int argc, char *argv[])
 
 	b1 = ALIGN(malloc(SPLICE_SIZE + align_mask));
 	b2 = ALIGN(malloc(SPLICE_SIZE + align_mask));
+
+	if (force_unalign) {
+		b1 += 1024;
+		b2 += 1024;
+	}
 
 	memset(b1, 0xaa, SPLICE_SIZE);
 	memset(b2, 0xbb, SPLICE_SIZE);

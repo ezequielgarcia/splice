@@ -29,6 +29,7 @@
 				 /* we may still block on the fd we splice */
 				 /* from/to, of course */
 #define SPLICE_F_MORE	(0x04)	/* expect more data */
+#define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
 
 static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
 			 size_t len, unsigned long flags)
