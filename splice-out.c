@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	if (index == -1 || index + 1 > argc)
 		return usage(argv[0]);
 
-	fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	fd = open(argv[index], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0)
 		return error("open");
 
