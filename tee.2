@@ -50,13 +50,16 @@ shall be set to indicate an error.
 
 .SH ERRORS
 .TP 1.1i
-.B EBADF
-.I fd
-either not valid, or none of the descriptors refer to a pipe.
-.TP
 .B EINVAL
-Target file system doesn't support splicing, none of the descriptors refer
-to a pipe or offset given for non-seekable device.
+.I fd_in
+and
+.I fd_out
+do not both refer to a pipe.
+
+.SH HISTORY
+The
+.BR tee (2)
+system call first appeared in Linux-2.6.17.
 
 .SH SEE ALSO
 .BR splice (2),
