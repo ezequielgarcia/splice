@@ -1,0 +1,66 @@
+.TH tee 2 2006-04-28 "Linux 2.6.17" "Linux Programmer's Manual"
+.SH NAME
+tee \- duplicating pipe content.
+.SH SYNOPSIS
+.B #include <sys/splice.h>
+
+.B long tee(int fd_in, int fd_out, size_t bytes, unsigned int flags);
+
+.SH DESCRIPTION
+.BR tee ()
+duplicates at most
+.I bytes
+of content from pipe
+.I fd_in
+to pipe
+.IR fd_out .
+.I flags
+is a series of modifier flags, which share the name space with
+.BR splice (2)
+and
+.BR vmsplice (2):
+
+.TP 1.9i
+.B SPLICE_F_MOVE
+See
+.BR splice (2)
+.TP
+.B SPLICE_F_NONBLOCK
+Do not block on io.
+.TP
+.B SPLICE_F_MORE
+More data will be coming in a subsequent splice.
+.TP
+.B SPLICE_F_GIFT
+See
+.BR vmsplice (2)
+
+.PP
+.BR tee ()
+doesn't copy any data around, it simply references the input data and
+links it to the output pipe.
+
+.SH RETURN VALUE
+Upon successful completion,
+.BR tee ()
+shall return the number of bytes that was duplicated between the input
+and output. Otherwise, it shall return a value of -1 and
+.I errno
+shall be set to indicate an error.
+
+.SH ERRORS
+.TP 1.1i
+.B EBADF
+.I fd
+either not valid, or none of the descriptors refer to a pipe.
+.TP
+.B EINVAL
+Target file system doesn't support splicing, none of the descriptors refer
+to a pipe or offset given for non-seekable device.
+
+.SH SEE ALSO
+.BR splice (2),
+.BR vmsplice (2)
+
+.SH AUTHORS
+Jens Axboe <axboe@suse.de>
