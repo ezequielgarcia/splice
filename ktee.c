@@ -15,10 +15,12 @@
 
 #include "splice.h"
 
+static int splice_flags;
+
 static int do_splice(int infd, int outfd, unsigned int len, char *msg)
 {
 	while (len) {
-		int written = splice(infd, NULL, outfd, NULL, len, 0);
+		int written = splice(infd, NULL, outfd, NULL, len, splice_flags);
 
 		if (written <= 0)
 			return error(msg);
@@ -31,13 +33,31 @@ static int do_splice(int infd, int outfd, unsigned int len, char *msg)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "... | %s: outfile\n", name);
+	fprintf(stderr, "... | %s: [-m(ove)] outfile\n", name);
 	return 1;
+}
+
+static int parse_options(int argc, char *argv[])
+{
+	int c, index = 1;
+
+	while ((c = getopt(argc, argv, "m")) != -1) {
+		switch (c) {
+		case 'm':
+			splice_flags = SPLICE_F_MOVE;
+			index++;
+			break;
+		default:
+			return -1;
+		}
+	}
+
+	return index;
 }
 
 int main(int argc, char *argv[])
 {
-	int fd;
+	int fd, index;
 
 	if (argc < 2)
 		return usage(argv[0]);
@@ -45,7 +65,11 @@ int main(int argc, char *argv[])
 	if (check_input_pipe())
 		return usage(argv[0]);
 
-	fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	index = parse_options(argc, argv);
+	if (index == -1 || index + 1 > argc)
+		return usage(argv[0]);
+
+	fd = open(argv[index], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0)
 		return error("open output");
 
