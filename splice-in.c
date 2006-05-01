@@ -7,8 +7,13 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #include "splice.h"
+
+#ifndef BLKGETSIZE64
+#define BLKGETSIZE64	_IOR(0x12,114,size_t)
+#endif
 
 static int usage(char *name)
 {
@@ -16,9 +21,26 @@ static int usage(char *name)
 	return 1;
 }
 
+static long long in_size(int fd)
+{
+	unsigned long long bytes;
+	struct stat sb;
+
+	if (fstat(fd, &sb) < 0)
+		return error("fstat");
+
+	if (sb.st_size)
+		return sb.st_size;
+
+	if (ioctl(fd, BLKGETSIZE64, &bytes) < 0)
+		return error("BLKGETSIZE64");
+
+	return bytes;
+}
+
 int main(int argc, char *argv[])
 {
-	struct stat sb;
+	long long isize;
 	int fd;
 
 	if (argc < 2)
@@ -31,19 +53,20 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		return error("open input");
 
-	if (fstat(fd, &sb) < 0)
-		return error("stat input");
+	isize = in_size(fd);
+	if (isize < 0)
+		return isize;
 
-	do {
-		int ret = splice(fd, NULL, STDOUT_FILENO, NULL, sb.st_size, 0);
+	while (isize) {
+		int ret = splice(fd, NULL, STDOUT_FILENO, NULL, isize, 0);
 
 		if (ret < 0)
 			return error("splice");
 		else if (!ret)
 			break;
 
-		sb.st_size -= ret;
-	} while (1);
+		isize -= ret;
+	}
 
 	close(fd);
 	return 0;
