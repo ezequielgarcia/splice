@@ -26,7 +26,9 @@ argument is a series of modifier flags:
 
 .TP 1.9i
 .B SPLICE_F_MOVE
-Attempt to move pages instead of copying.
+Attempt to move pages instead of copying. This is only a hint to the kernel,
+pages may still be copied if we fail in stealing it out of the pipe or if
+the pipe buffers don't refer to full pages.
 .TP
 .B SPLICE_F_NONBLOCK
 Do not block on io.
