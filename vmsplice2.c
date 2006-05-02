@@ -109,16 +109,16 @@ int main(int argc, char *argv[])
 		if (cross_page) {
 			void *ptr;
 
-			ptr = ALIGN(malloc(2 * PAGE_SIZE));
-			h = ptr - (strlen(S1) / 2);
+			ptr = ALIGN(malloc(3 * PAGE_SIZE));
+			h = ptr + PAGE_SIZE - (strlen(S1) / 2);
 			strcpy(h, S1);
 
-			ptr = ALIGN(malloc(2 * PAGE_SIZE));
-			b = ptr - (strlen(S2) / 2);
+			ptr = ALIGN(malloc(3 * PAGE_SIZE));
+			b = ptr + PAGE_SIZE - (strlen(S2) / 2);
 			strcpy(b, S2);
 
-			ptr = ALIGN(malloc(2 * PAGE_SIZE));
-			f = ptr - (strlen(S3) / 2);
+			ptr = ALIGN(malloc(3 * PAGE_SIZE));
+			f = ptr + PAGE_SIZE - (strlen(S3) / 2);
 			strcpy(f, S3);
 		} else {
 			h = strdup(S1);
