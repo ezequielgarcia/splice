@@ -13,7 +13,12 @@
 
 #include "splice.h"
 
+#define PAGE_SIZE	4096
+#define PAGE_MASK	(PAGE_SIZE - 1)
+#define ALIGN(buf)	(void *) (((unsigned long) (buf) + PAGE_MASK) & ~PAGE_MASK)
+
 static int alloc_stack;
+static int cross_page;
 
 int do_vmsplice(int fd, struct iovec *iov, unsigned long nr_vecs)
 {
@@ -55,7 +60,7 @@ int do_vmsplice(int fd, struct iovec *iov, unsigned long nr_vecs)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s [-s(tack)] | ...\n", name);
+	fprintf(stderr, "%s [-s(tack)] [-c(ross page)]| ...\n", name);
 	return 1;
 }
 
@@ -63,16 +68,23 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "s")) != -1) {
+	while ((c = getopt(argc, argv, "sc")) != -1) {
 		switch (c) {
 		case 's':
 			alloc_stack = 1;
+			index++;
+			break;
+		case 'c':
+			cross_page = 1;
 			index++;
 			break;
 		default:
 			return -1;
 		}
 	}
+
+	if (alloc_stack && cross_page)
+		fprintf(stderr, "Stack alloc and cross page are mutually exclusive\n");
 
 	return index;
 }
@@ -94,9 +106,25 @@ int main(int argc, char *argv[])
 		b = S2;
 		f = S3;
 	} else {
-		h = strdup(S1);
-		b = strdup(S2);
-		f = strdup(S3);
+		if (cross_page) {
+			void *ptr;
+
+			ptr = ALIGN(malloc(2 * PAGE_SIZE));
+			h = ptr - (strlen(S1) / 2);
+			strcpy(h, S1);
+
+			ptr = ALIGN(malloc(2 * PAGE_SIZE));
+			b = ptr - (strlen(S2) / 2);
+			strcpy(b, S2);
+
+			ptr = ALIGN(malloc(2 * PAGE_SIZE));
+			f = ptr - (strlen(S3) / 2);
+			strcpy(f, S3);
+		} else {
+			h = strdup(S1);
+			b = strdup(S2);
+			f = strdup(S3);
+		}
 	}
 
 	vecs[0].iov_base = h;
