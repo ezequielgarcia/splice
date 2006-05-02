@@ -77,8 +77,8 @@ static int parse_options(int argc, char *argv[])
 	return index;
 }
 
-#define S1	"header header header header header header header header"
-#define S2	"body body body body body body body body body body body"
+#define S1	"header header header header header header header header "
+#define S2	"body body body body body body body body body body body "
 #define S3	"footer footer footer footer footer footer footer footer"
 
 int main(int argc, char *argv[])
@@ -90,7 +90,6 @@ int main(int argc, char *argv[])
 		return usage(argv[0]);
 
 	if (alloc_stack) {
-		/* Dangerous on-stack usage! */
 		h = S1;
 		b = S2;
 		f = S3;
