@@ -10,7 +10,8 @@ splice \- splice data to/from a pipe.
 The act of splicing can be seen as a way to connect two ends of a rope
 through a kernel buffer, where that buffer is implemented as a pipe. It
 provides a means to move data around without copying it to/from kernel/user
-address space.
+address space, basically a random kernel buffer that the user has full
+control over.
 
 The
 .BR splice ()
@@ -37,7 +38,7 @@ Do not block on io.
 More data will be coming in a subsequent splice. This is a helpful hint when
 the output descriptor refers to a socket, see also
 .B MSG_MORE
-(see 
+(see
 .BR send (2)
 and
 .B TCP_CORK
@@ -63,6 +64,9 @@ File descriptors either not valid, or do not have proper rw permission.
 .B EINVAL
 Target file system doesn't support splicing, none of the descriptors refer
 to a pipe or offset given for non-seekable device.
+.TP
+.B ENOMEM
+Ran out of memory.
 
 .SH HISTORY
 The
