@@ -57,19 +57,31 @@ static int usage(char *name)
 	return 1;
 }
 
+#define S1	"header header header header header header header header"
+#define S2	"body body body body body body body body body body body"
+#define S3	"footer footer footer footer footer footer footer footer"
+
 int main(int argc, char *argv[])
 {
-	char h[] = "header header header header header header header header";
-	char b[] = "body body body body body body body body body body body";
-	char f[] = "footer footer footer footer footer footer footer footer";
 	struct iovec vecs[3];
+#if 0
+	/* Dangerous on-stack usage! */
+	char h[] = S1;
+	char b[] = S2;
+	char f[] = S3;
 
 	vecs[0].iov_base = h;
-	vecs[0].iov_len = strlen(h);
 	vecs[1].iov_base = b;
-	vecs[1].iov_len = strlen(b);
 	vecs[2].iov_base = f;
-	vecs[2].iov_len = strlen(f);
+#else
+	vecs[0].iov_base = strdup(S1);
+	vecs[1].iov_base = strdup(S2);
+	vecs[2].iov_base = strdup(S3);
+
+	vecs[0].iov_len = strlen(vecs[0].iov_base);
+	vecs[1].iov_len = strlen(vecs[1].iov_base);
+	vecs[2].iov_len = strlen(vecs[2].iov_base);
+#endif
 		
 	if (check_output_pipe())
 		return usage(argv[0]);
