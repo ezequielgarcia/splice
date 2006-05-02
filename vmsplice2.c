@@ -13,6 +13,8 @@
 
 #include "splice.h"
 
+static int alloc_stack;
+
 int do_vmsplice(int fd, struct iovec *iov, unsigned long nr_vecs)
 {
 	struct pollfd pfd = { .fd = fd, .events = POLLOUT, };
@@ -53,8 +55,26 @@ int do_vmsplice(int fd, struct iovec *iov, unsigned long nr_vecs)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s | ...\n", name);
+	fprintf(stderr, "%s [-s(tack)] | ...\n", name);
 	return 1;
+}
+
+static int parse_options(int argc, char *argv[])
+{
+	int c, index = 1;
+
+	while ((c = getopt(argc, argv, "s")) != -1) {
+		switch (c) {
+		case 's':
+			alloc_stack = 1;
+			index++;
+			break;
+		default:
+			return -1;
+		}
+	}
+
+	return index;
 }
 
 #define S1	"header header header header header header header header"
@@ -64,24 +84,28 @@ static int usage(char *name)
 int main(int argc, char *argv[])
 {
 	struct iovec vecs[3];
-#if 0
-	/* Dangerous on-stack usage! */
-	char h[] = S1;
-	char b[] = S2;
-	char f[] = S3;
+	char *h, *b, *f;
+
+	if (parse_options(argc, argv) < 0)
+		return usage(argv[0]);
+
+	if (alloc_stack) {
+		/* Dangerous on-stack usage! */
+		h = S1;
+		b = S2;
+		f = S3;
+	} else {
+		h = strdup(S1);
+		b = strdup(S2);
+		f = strdup(S3);
+	}
 
 	vecs[0].iov_base = h;
 	vecs[1].iov_base = b;
 	vecs[2].iov_base = f;
-#else
-	vecs[0].iov_base = strdup(S1);
-	vecs[1].iov_base = strdup(S2);
-	vecs[2].iov_base = strdup(S3);
-
 	vecs[0].iov_len = strlen(vecs[0].iov_base);
 	vecs[1].iov_len = strlen(vecs[1].iov_base);
 	vecs[2].iov_len = strlen(vecs[2].iov_base);
-#endif
 		
 	if (check_output_pipe())
 		return usage(argv[0]);
