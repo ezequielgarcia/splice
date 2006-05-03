@@ -122,7 +122,6 @@ int main(int argc, char *argv[])
 	char stack1[ASIZE], stack2[ASIZE], stack3[ASIZE];
 	char *h_s, *h_e, *b_s, *b_e, *f_s, *f_e;
 	char *h, *b, *f;
-	int i;
 
 	if (check_output_pipe())
 		return usage(argv[0]);
