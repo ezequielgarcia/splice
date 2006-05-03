@@ -158,7 +158,7 @@ static int server(int offset)
 	struct sockaddr_in saddr_in;
 	struct sockaddr addr;
 	unsigned int len;
-	int sk;
+	int sk, opt;
 
 	bind_to_cpu(offset);
 	nice(-20);
@@ -167,10 +167,14 @@ static int server(int offset)
 	if (sk < 0)
 		return error("socket");
 
+	opt = 1;
+	if (setsockopt(sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+		return error("setsockopt");
+
 	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	saddr_in.sin_port = htons(net_port + offset);
 
-	if (bind(sk, (struct sockaddr*)&saddr_in, sizeof(saddr_in)) < 0)
+	if (bind(sk, (struct sockaddr *) &saddr_in, sizeof(saddr_in)) < 0)
 		return error("bind");
 
 	if (listen(sk, 1) < 0)
