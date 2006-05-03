@@ -48,11 +48,12 @@ again:
 	goto again;
 }
 
-int main(int argc, char **argv)
+int main(__attribute__((__unused__)) int argc, __attribute__((__unused__)) char **argv)
 {
-	unsigned int sk, len;
-	struct sockaddr addr;
 	struct sockaddr_in saddr_in;
+	struct sockaddr addr;
+	unsigned int len;
+	int sk;
 
 	signal(SIGCHLD, SIG_IGN);
 	sk = socket(PF_INET, SOCK_STREAM, 0);

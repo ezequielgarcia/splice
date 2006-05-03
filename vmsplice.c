@@ -50,7 +50,7 @@ int do_vmsplice(int fd, void *b1, void *b2, int len)
 			return error("vmsplice");
 
 		len -= written;
-		if (written >= iov[idx].iov_len) {
+		if ((size_t) written >= iov[idx].iov_len) {
 			int extra = written - iov[idx].iov_len;
 
 			idx++;

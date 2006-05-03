@@ -25,7 +25,7 @@
 #define TARGET_HOSTNAME "localhost"
 
 #define BYTES (128*1024*1024UL)
-#define BUFSIZE (64*1024)
+#define BUFSIZE (64*1024U)
 
 #define NR (BYTES/BUFSIZE)
 
@@ -112,7 +112,7 @@ static void calibrate_loops(void)
 	printf("%Ld cycles/sec\n", cycles_per_sec);
 }
 
-static int child(struct sockaddr *addr, int len)
+static int child(void)
 {
 	static char buffer[BUFSIZE];
 	int sk;
@@ -121,7 +121,8 @@ static int child(struct sockaddr *addr, int len)
 	struct sockaddr_in s_to;
 	struct hostent *hp;
 	double r1, r2, r3, r4, r5;
-	int i, pipefd[2];
+	unsigned int i;
+	int pipefd[2];
 	loff_t off = 0;
 
 	r1 = r2 = r3 = r4 = r5 = 0;
@@ -141,7 +142,7 @@ static int child(struct sockaddr *addr, int len)
 	fprintf(stdout, "BUFSIZE = %d\n", BUFSIZE);
 	fflush(stdout);
 
-	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+	if (connect(sk, (struct sockaddr *)&s_to, sizeof(s_to)) < 0)
 		return error("connect");
 
 	start_timing("Empty buffer");
@@ -166,7 +167,7 @@ static int child(struct sockaddr *addr, int len)
 	start_timing("sendfile");
 sendfile_again:
 	sk = socket(PF_INET, SOCK_STREAM, 0);
-	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+	if (connect(sk, (struct sockaddr *)&s_to, sizeof(s_to)) < 0)
 		return error("connect");
 
 	fd = open("largefile", O_RDONLY);
@@ -188,7 +189,7 @@ sendfile_again:
 	start_timing("splice-pipe");
 splice_pipe_again:
 	sk = socket(PF_INET, SOCK_STREAM, 0);
-	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+	if (connect(sk, (struct sockaddr *)&s_to, sizeof(s_to)) < 0)
 		return error("connect");
 
 	fd = open("largefile", O_RDONLY);
@@ -229,7 +230,7 @@ splice_pipe_again:
 	start_timing("splice");
 splice_again:
 	sk = socket(PF_INET, SOCK_STREAM, 0);
-	if (connect(sk, (struct sockaddr *)&s_to, len) < 0)
+	if (connect(sk, (struct sockaddr *)&s_to, sizeof(s_to)) < 0)
 		return error("connect");
 
 	fd = open("largefile", O_RDONLY);
@@ -353,36 +354,22 @@ static void lowprio_cycle_soak_loop(void)
 	}
 }
 
-int main(int argc, char **argv)
+int main(__attribute__((__unused__)) int argc, __attribute__((__unused__)) char **argv)
 {
-	unsigned int sk, len;
-	struct sockaddr addr;
 	pid_t pid;
 
 	setup_shared_var();
 
 	signal(SIGCHLD, SIG_IGN);
-	sk = socket(PF_INET, SOCK_STREAM, 0);
-	if (sk < 0) {
-		perror("socket");
-		exit(1);
-	}
-	if (listen(sk, 1) < 0) {
-		perror("listen");
-		exit(1);
-	}
-	len = sizeof(addr);
-	if (getsockname(sk, &addr, &len) < 0) {
-		perror("getsockname");
-		exit(1);
-	}
+
 	pid = fork();
 	if (!pid) {
 		lowprio_cycle_soak_loop();
 		exit(0);
 	}
+
 	nice(-20);
-	child(&addr, len);
+	child();
 	kill(pid, SIGHUP);
 	exit(0);
 }

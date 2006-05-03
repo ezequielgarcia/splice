@@ -28,7 +28,7 @@ static int write_to_null;
 static int same_file;
 static int splice_size = SPLICE_SIZE;
 static char *filename = "splice-file";
-static int max_client_run = 15;
+static unsigned int max_client_run = 15;
 static int run_rw = 1;
 static int run_splice = 1;
 static int run_mmap = 1;
