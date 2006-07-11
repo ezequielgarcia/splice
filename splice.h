@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
-#include <asm/unistd.h>
+#include <linux/unistd.h>
 
 #if defined(__i386__)
 #define __NR_sys_splice		313
