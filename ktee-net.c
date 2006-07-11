@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 		return error("connect");
 
 	do {
-		int tee_len = tee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, SPLICE_F_NONBLOCK);
+		int tee_len = tee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, 0);
 
 		if (tee_len < 0) {
 			if (errno == EAGAIN) {
