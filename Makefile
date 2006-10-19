@@ -22,6 +22,7 @@ mandir = $(prefix)/man
 install: $(PROGS)
 	$(INSTALL) -m755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) $(PROGS) $(DESTDIR)$(bindir)
+	$(INSTALL) -m755 -d $(DESTDIR)$(mandir)/man2
 	$(INSTALL) $(MANS) $(DESTDIR)$(mandir)/man2
 
 ifneq ($(wildcard .depend),)
