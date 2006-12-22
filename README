@@ -16,7 +16,9 @@ splice-cp:	Splice input file to output file, basically copying the
 
 splice-in:	Splice given file to stdout.
 
-splice-net:	Splice given file to network host.
+splice-tonet:	Splice stdin network host.
+
+splice-fromnet:	Splice from network stdout.
 
 splice-out:	Splice stdin to given file.
 
