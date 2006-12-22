@@ -4,7 +4,8 @@ ktee
 ktee-net
 splice-cp
 splice-in
-splice-net
+splice-fromnet
+splice-tonet
 splice-out
 splice-test4c
 splice-test4s
