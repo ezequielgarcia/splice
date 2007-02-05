@@ -33,25 +33,22 @@
 #define SPLICE_F_MORE	(0x04)	/* expect more data */
 #define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
 
-_syscall6(int, sys_splice, int, fdin, loff_t *, off_in, int, fdout, loff_t *, off_out, size_t, len, unsigned int, flags);
-_syscall4(int, sys_vmsplice, int, fd, const struct iovec *, iov, unsigned long, nr_segs, unsigned int, flags);
-_syscall4(int, sys_tee, int, fdin, int, fdout, size_t, len, unsigned int, flags);
-
 static inline int splice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
 			 size_t len, unsigned long flags)
 {
-	return sys_splice(fdin, off_in, fdout, off_out, len, flags);
+	
+	return syscall(__NR_sys_splice, fdin, off_in, fdout, off_out, len, flags);
 }
 
 static inline int tee(int fdin, int fdout, size_t len, unsigned int flags)
 {
-	return sys_tee(fdin, fdout, len, flags);
+	return syscall(__NR_sys_tee, fdin, fdout, len, flags);
 }
 
 static inline int vmsplice(int fd, const struct iovec *iov,
 			   unsigned long nr_segs, unsigned int flags)
 {
-	return sys_vmsplice(fd, iov, nr_segs, flags);
+	return syscall(__NR_sys_vmsplice, fd, iov, nr_segs, flags);
 }
 
 #define SPLICE_SIZE	(64*1024)
