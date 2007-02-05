@@ -26,6 +26,8 @@
 #error unsupported arch
 #endif
 
+#ifndef SPLICE_F_MOVE
+
 #define SPLICE_F_MOVE	(0x01)	/* move pages instead of copying */
 #define SPLICE_F_NONBLOCK (0x02) /* don't block on the pipe splicing (but */
 				 /* we may still block on the fd we splice */
@@ -50,6 +52,8 @@ static inline int vmsplice(int fd, const struct iovec *iov,
 {
 	return syscall(__NR_sys_vmsplice, fd, iov, nr_segs, flags);
 }
+
+#endif /* SPLICE_F_MOVE defined */
 
 #define SPLICE_SIZE	(64*1024)
 
