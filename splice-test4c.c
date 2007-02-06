@@ -315,6 +315,13 @@ static void setup_shared_var(void)
 do {							\
 	__asm__ __volatile__("rdtsc" : "=A" (val));	\
 } while (0)
+#elif defined(__x86_64__)
+#define rdtscll(val)						\
+do {								\
+	uint64_t lo, hi;					\
+	__asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));	\
+	(val) = (hi << 32) | lo;				\
+} while (0)
 #if 0
 #elif defined(__ia64__)
 #define rdtscll(val)					\
