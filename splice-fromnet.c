@@ -1,8 +1,5 @@
 /*
- * Splice from network to pipe. Currently splicing from a socket is not
- * supported, so this test case demonstrates how to use read + vmsplice/splice
- * to achieve the desired effect. This still involves a copy, so it's
- * not as fast as real splice from socket would be.
+ * Splice from network to stdout
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,123 +13,86 @@
 #include <string.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <sys/poll.h>
 
 #include "splice.h"
 
-#define PSIZE	4096
-#define MASK	(PSIZE - 1)
-
-#define ALIGN(buf)	(void *) (((unsigned long) (buf) + MASK) & ~MASK)
-
-static int splice_flags;
-
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-g] port\n", name);
+	fprintf(stderr, "%s: port\n", name);
 	return 1;
 }
 
-static unsigned long mtime_since(struct timeval *s, struct timeval *e)
+static int splice_from_net(int fd)
 {
-	double sec, usec;
-
-	sec = e->tv_sec - s->tv_sec;
-	usec = e->tv_usec - s->tv_usec;
-	if (sec > 0 && usec < 0) {
-		sec--;
-		usec += 1000000;
-	}
-
-	sec *= (double) 1000;
-	usec /= (double) 1000;
-
-	return sec + usec;
-}
-
-static unsigned long mtime_since_now(struct timeval *s)
-{
-	struct timeval t;
-
-	gettimeofday(&t, NULL);
-	return mtime_since(s, &t);
-}
-
-static int recv_loop(int fd, char *buf)
-{
-	unsigned long kb_recv = 0, spent;
-	struct timeval s;
-	struct iovec iov;
-	int idx = 0;
-
-	gettimeofday(&s, NULL);
-
-	do {
-		char *ptr = buf + idx * SPLICE_SIZE;
+	while (1) {
+		struct pollfd pfd = {
+			.fd = fd,
+			.events = POLLIN,
+		};
 		int ret;
 
-		ret = recv(fd, ptr, SPLICE_SIZE, MSG_WAITALL);
-		if (ret < 0) {
-			perror("recv");
-			return 1;
-		} else if (ret != SPLICE_SIZE)
+		ret = poll(&pfd, 1, -1);
+		if (ret < 0)
+			return error("poll");
+		else if (!ret)
+			continue;
+
+		if (!(pfd.revents & POLLIN))
+			continue;
+
+		ret = splice(fd, NULL, STDOUT_FILENO, NULL, SPLICE_SIZE, 0);
+
+		if (ret < 0)
+			return error("splice");
+		else if (!ret)
 			break;
-
-		iov.iov_base = ptr;
-		iov.iov_len = SPLICE_SIZE;
-		ret = vmsplice(STDOUT_FILENO, &iov, 1, splice_flags);
-		if (ret < 0) {
-			perror("vmsplice");
-			return 1;
-		} else if (ret != SPLICE_SIZE) {
-			fprintf(stderr, "bad vmsplice %d\n", ret);
-			return 1;
-		}
-		idx = (idx + 1) & 0x01;
-		kb_recv += (SPLICE_SIZE / 1024);
-	} while (1);
-
-	spent = mtime_since_now(&s);
-	fprintf(stderr, "%lu MiB/sec (%luKiB in %lu msec)\n", kb_recv / spent, kb_recv, spent);
+	}
 
 	return 0;
 }
 
-static int parse_options(int argc, char *argv[])
+static int get_connect(int fd, struct sockaddr_in *addr)
 {
-	int c, index = 1;
+	socklen_t socklen = sizeof(*addr);
+	int ret, connfd;
 
-	while ((c = getopt(argc, argv, "g")) != -1) {
-		switch (c) {
-		case 'g':
-			splice_flags = SPLICE_F_GIFT;
-			index++;
-			break;
-		default:
-			return -1;
-		}
-	}
+	do {
+		struct pollfd pfd = {
+			.fd = fd,
+			.events = POLLIN,
+		};
 
-	return index;
+		ret = poll(&pfd, 1, -1);
+		if (ret < 0)
+			return error("poll");
+		else if (!ret)
+			continue;
+
+		connfd = accept(fd, (struct sockaddr *) addr, &socklen);
+		if (connfd < 0)
+			return error("accept");
+		break;
+	} while (1);
+			
+	return connfd;
 }
 
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
 	unsigned short port;
-	unsigned int len;
-	int fd, opt, sk, index;
-	char *buf;
+	int connfd, opt, fd;
+
+	if (argc < 2)
+		return usage(argv[0]);
 
 	if (check_output_pipe())
 		return usage(argv[0]);
 
-	index = parse_options(argc, argv);
-	if (index == -1 || index + 1 > argc)
-		return usage(argv[0]);
+	port = atoi(argv[1]);
 
-	port = atoi(argv[index]);
-
-	fd = socket(PF_INET, SOCK_STREAM, 0);
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd < 0)
 		return error("socket");
 
@@ -141,26 +101,18 @@ int main(int argc, char *argv[])
 		return error("setsockopt");
 
 	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 		return error("bind");
-
 	if (listen(fd, 1) < 0)
 		return error("listen");
 
-	len = sizeof(addr);
-	sk = accept(fd, &addr, &len);
-	if (sk < 0)
-		return error("accept");
+	connfd = get_connect(fd, &addr);
+	if (connfd < 0)
+		return connfd;
 
-	fprintf(stderr, "Connected\n");
-
-	buf = ALIGN(malloc(2 * SPLICE_SIZE - 1));
-
-	return recv_loop(sk, buf);
-
-	close(fd);
-	return 0;
+	return splice_from_net(connfd);
 }
