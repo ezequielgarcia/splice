@@ -38,7 +38,7 @@
 #endif /* SPLICE_F_MOVE defined */
 
 static inline int ssplice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
-			  size_t len, unsigned long flags)
+			  size_t len, unsigned int flags)
 {
 	
 	return syscall(__NR_sys_splice, fdin, off_in, fdout, off_out, len, flags);
