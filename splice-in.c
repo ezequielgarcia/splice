@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 		return isize;
 
 	while (isize) {
-		int ret = splice(fd, NULL, STDOUT_FILENO, NULL, isize, 0);
+		int ret = ssplice(fd, NULL, STDOUT_FILENO, NULL, isize, 0);
 
 		if (ret < 0)
 			return error("splice");

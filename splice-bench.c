@@ -329,7 +329,7 @@ again:
 	off = 0;
 
 	do {
-		int ret = splice(fd, &off, pfd[1], NULL, min(size, (unsigned long long) splice_size), 0);
+		int ret = ssplice(fd, &off, pfd[1], NULL, min(size, (unsigned long long) splice_size), 0);
 
 		if (ret <= 0)
 			return error("splice-in");
@@ -337,7 +337,7 @@ again:
 		size -= ret;
 		while (ret > 0) {
 			int flags = size ? SPLICE_F_MORE : 0;
-			int written = splice(pfd[0], NULL, out_fd, NULL, ret, flags);
+			int written = ssplice(pfd[0], NULL, out_fd, NULL, ret, flags);
 
 			if (written <= 0)
 				return error("splice-out");

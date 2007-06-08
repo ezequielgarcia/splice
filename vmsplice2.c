@@ -36,7 +36,7 @@ int do_vmsplice(int fd, struct iovec *iov, unsigned long nr_vecs)
 		if (poll(&pfd, 1, -1) < 0)
 			return error("poll");
 
-		written = vmsplice(fd, iov, nr_vecs, gift ? SPLICE_F_GIFT : 0);
+		written = svmsplice(fd, iov, nr_vecs, gift ? SPLICE_F_GIFT : 0);
 
 		if (written <= 0)
 			return error("vmsplice");

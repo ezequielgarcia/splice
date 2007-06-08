@@ -41,7 +41,7 @@ static int splice_from_net(int fd)
 		if (!(pfd.revents & POLLIN))
 			continue;
 
-		ret = splice(fd, NULL, STDOUT_FILENO, NULL, SPLICE_SIZE, 0);
+		ret = ssplice(fd, NULL, STDOUT_FILENO, NULL, SPLICE_SIZE, 0);
 
 		if (ret < 0)
 			return error("splice");

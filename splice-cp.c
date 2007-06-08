@@ -64,14 +64,14 @@ int main(int argc, char *argv[])
 
 	do {
 		int this_len = min((off_t) BS, sb.st_size);
-		int ret = splice(in_fd, NULL, pfds[1], NULL, this_len, 0);
+		int ret = ssplice(in_fd, NULL, pfds[1], NULL, this_len, 0);
 
 		if (ret <= 0)
 			return error("splice-in");
 
 		sb.st_size -= ret;
 		while (ret > 0) {
-			int written = splice(pfds[0], NULL, out_fd, NULL, ret, splice_flags);
+			int written = ssplice(pfds[0], NULL, out_fd, NULL, ret, splice_flags);
 			if (written <= 0)
 				return error("splice-out");
 			ret -= written;

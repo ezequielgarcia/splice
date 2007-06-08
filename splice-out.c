@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 		return error("open");
 
 	do {
-		int ret = splice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, splice_flags);
+		int ret = ssplice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, splice_flags);
 
 		if (ret < 0)
 			return error("splice");

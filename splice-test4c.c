@@ -201,13 +201,13 @@ splice_pipe_again:
 	i = NR*BUFSIZE;
 	off = 0;
 	do {
-		int ret = splice(fd, &off, pipefd[1], NULL, min(i, BUFSIZE), SPLICE_F_NONBLOCK);
+		int ret = ssplice(fd, &off, pipefd[1], NULL, min(i, BUFSIZE), SPLICE_F_NONBLOCK);
 		if (ret <= 0)
 			return error("splice-pipe-in");
 		i -= ret;
 		while (ret > 0) {
 			int flags = i ? SPLICE_F_MORE : 0;
-			int written = splice(pipefd[0], NULL, sk, NULL, ret, flags);
+			int written = ssplice(pipefd[0], NULL, sk, NULL, ret, flags);
 			if (written <= 0)
 				return error("splice-pipe-out");
 			ret -= written;
@@ -243,7 +243,7 @@ splice_again:
 		int flags = BUFSIZE < i ? SPLICE_F_MORE : 0;
 		int ret;
 
-		ret = splice(fd, &off, sk, NULL, min(i, BUFSIZE), flags);
+		ret = ssplice(fd, &off, sk, NULL, min(i, BUFSIZE), flags);
 
 		if (ret <= 0)
 			return error("splice");

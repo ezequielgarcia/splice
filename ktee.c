@@ -20,7 +20,7 @@ static int splice_flags;
 static int do_splice(int infd, int outfd, unsigned int len, char *msg)
 {
 	while (len) {
-		int written = splice(infd, NULL, outfd, NULL, len, splice_flags);
+		int written = ssplice(infd, NULL, outfd, NULL, len, splice_flags);
 
 		if (written <= 0)
 			return error(msg);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 		return error("open output");
 
 	do {
-		int tee_len = tee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, 0);
+		int tee_len = stee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, 0);
 
 		if (tee_len < 0) {
 			if (errno == EAGAIN) {

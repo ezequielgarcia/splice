@@ -45,7 +45,7 @@ int do_vmsplice(int fd, void *b1, void *b2, int len)
 		if (poll(&pfd, 1, -1) < 0)
 			return error("poll");
 
-		written = vmsplice(fd, &iov[idx], 2 - idx, splice_flags);
+		written = svmsplice(fd, &iov[idx], 2 - idx, splice_flags);
 
 		if (written <= 0)
 			return error("vmsplice");

@@ -19,7 +19,7 @@
 static int do_splice(int infd, int outfd, unsigned int len, char *msg)
 {
 	while (len) {
-		int written = splice(infd, NULL, outfd, NULL, len, 0);
+		int written = ssplice(infd, NULL, outfd, NULL, len, 0);
 
 		if (written <= 0)
 			return error(msg);
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 		return error("connect");
 
 	do {
-		int tee_len = tee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, 0);
+		int tee_len = stee(STDIN_FILENO, STDOUT_FILENO, INT_MAX, 0);
 
 		if (tee_len < 0) {
 			if (errno == EAGAIN) {

@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		return error("connect");
 
 	do {
-		ret = splice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
+		ret = ssplice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, SPLICE_F_NONBLOCK);
 		if (ret < 0) {
 			if (errno == EAGAIN) {
 				usleep(100);
