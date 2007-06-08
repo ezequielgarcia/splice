@@ -66,8 +66,10 @@ int main(int argc, char *argv[])
 		int this_len = min((off_t) BS, sb.st_size);
 		int ret = ssplice(in_fd, NULL, pfds[1], NULL, this_len, 0);
 
-		if (ret <= 0)
+		if (ret < 0)
 			return error("splice-in");
+		else if (!ret)
+			break;
 
 		sb.st_size -= ret;
 		while (ret > 0) {
