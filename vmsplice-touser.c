@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <string.h>
 #include <getopt.h>
+#include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/types.h>
 
