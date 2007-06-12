@@ -18,11 +18,12 @@
 #include "splice.h"
 
 static unsigned int splice_size = SPLICE_SIZE;
+static unsigned int splice_flags;
 static int wait_for_poll;
 
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: [-s splice size] [-w wait for poll] port\n", name);
+	fprintf(stderr, "%s: [-s splice size] [-w wait for poll] [-n non-blocking] port\n", name);
 	return 1;
 }
 
@@ -88,7 +89,7 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "s:w:")) != -1) {
+	while ((c = getopt(argc, argv, "s:w:n")) != -1) {
 		switch (c) {
 		case 's':
 			splice_size = atoi(optarg);
@@ -96,6 +97,10 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'w':
 			wait_for_poll = atoi(optarg);
+			index++;
+			break;
+		case 'n':
+			splice_flags |= SPLICE_F_NONBLOCK;
 			index++;
 			break;
 		default:

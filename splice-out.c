@@ -9,10 +9,11 @@
 #include "splice.h"
 
 static int splice_flags;
+static unsigned int splice_size = SPLICE_SIZE;
 
 static int usage(char *name)
 {
-	fprintf(stderr, "... | %s: [-m] out_file\n", name);
+	fprintf(stderr, "... | %s: [-m] [-s splice size] out_file\n", name);
 	return 1;
 }
 
@@ -20,10 +21,14 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "m")) != -1) {
+	while ((c = getopt(argc, argv, "ms:")) != -1) {
 		switch (c) {
 		case 'm':
 			splice_flags = SPLICE_F_MOVE;
+			index++;
+			break;
+		case 's':
+			splice_size = atoi(optarg);
 			index++;
 			break;
 		default:
@@ -50,7 +55,7 @@ int main(int argc, char *argv[])
 		return error("open");
 
 	do {
-		int ret = ssplice(STDIN_FILENO, NULL, fd, NULL, SPLICE_SIZE, splice_flags);
+		int ret = ssplice(STDIN_FILENO, NULL, fd, NULL, splice_size, splice_flags);
 
 		if (ret < 0)
 			return error("splice");
