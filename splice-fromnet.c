@@ -17,31 +17,37 @@
 
 #include "splice.h"
 
+static unsigned int splice_size = SPLICE_SIZE;
+static int wait_for_poll;
+
 static int usage(char *name)
 {
-	fprintf(stderr, "%s: port\n", name);
+	fprintf(stderr, "%s: [-s splice size] [-w wait for poll] port\n", name);
 	return 1;
 }
 
 static int splice_from_net(int fd)
 {
 	while (1) {
-		struct pollfd pfd = {
-			.fd = fd,
-			.events = POLLIN,
-		};
 		int ret;
 
-		ret = poll(&pfd, 1, -1);
-		if (ret < 0)
-			return error("poll");
-		else if (!ret)
-			continue;
+		if (wait_for_poll) {
+			struct pollfd pfd = {
+				.fd = fd,
+				.events = POLLIN,
+			};
 
-		if (!(pfd.revents & POLLIN))
-			continue;
+			ret = poll(&pfd, 1, -1);
+			if (ret < 0)
+				return error("poll");
+			else if (!ret)
+				continue;
 
-		ret = ssplice(fd, NULL, STDOUT_FILENO, NULL, SPLICE_SIZE, 0);
+			if (!(pfd.revents & POLLIN))
+				continue;
+		}
+
+		ret = ssplice(fd, NULL, STDOUT_FILENO, NULL, splice_size, 0);
 
 		if (ret < 0)
 			return error("splice");
@@ -78,11 +84,34 @@ static int get_connect(int fd, struct sockaddr_in *addr)
 	return connfd;
 }
 
+static int parse_options(int argc, char *argv[])
+{
+	int c, index = 1;
+
+	while ((c = getopt(argc, argv, "s:w:")) != -1) {
+		switch (c) {
+		case 's':
+			splice_size = atoi(optarg);
+			index++;
+			break;
+		case 'w':
+			wait_for_poll = atoi(optarg);
+			index++;
+			break;
+		default:
+			return -1;
+		}
+	}
+
+	return index;
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in addr;
 	unsigned short port;
-	int connfd, opt, fd;
+	int connfd, opt, fd, index;
 
 	if (argc < 2)
 		return usage(argv[0]);
@@ -90,7 +119,11 @@ int main(int argc, char *argv[])
 	if (check_output_pipe())
 		return usage(argv[0]);
 
-	port = atoi(argv[1]);
+	index = parse_options(argc, argv);
+	if (index == -1 || index + 1 > argc)
+		return usage(argv[0]);
+
+	port = atoi(argv[index]);
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (fd < 0)
