@@ -18,7 +18,7 @@ splice-in:	Splice given file to stdout.
 
 splice-tonet:	Splice stdin network host.
 
-splice-fromnet:	Splice from network stdout.
+splice-fromnet:	Splice from network to stdout.
 
 splice-out:	Splice stdin to given file.
 
@@ -33,10 +33,12 @@ splice-bench:	Test various sides of splice performance.
 vmsplice:
 vmsplice2:	Splice user memory to a pipe.
 
+vmsplice-to-user: Test splicing back into user memory.
+
 All tools written by me, except splice-test4c/s which are from Ingo Molnar.
 
 
 
 
-Jens Axboe, 20060430
+Jens Axboe, 20070613
 
