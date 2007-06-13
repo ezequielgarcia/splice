@@ -34,6 +34,7 @@
 				 /* from/to, of course */
 #define SPLICE_F_MORE	(0x04)	/* expect more data */
 #define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
+#define SPLICE_F_UNMAP	(0x10)	/* undo vmsplice map */
 
 #endif /* SPLICE_F_MOVE defined */
 

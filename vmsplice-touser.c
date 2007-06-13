@@ -14,16 +14,28 @@
 #include "splice.h"
 
 static int do_dump;
+static int do_ascii;
+static int do_zeromap;
 static int splice_flags;
 
-int do_vmsplice(int fd, void *buf, int len)
+static int do_vmsplice_unmap(int fd, unsigned char *buf, int len)
+{
+	struct iovec iov = {
+		.iov_base = buf,
+		.iov_len = len,
+	};
+
+	return svmsplice(fd, &iov, 1, SPLICE_F_UNMAP);
+}
+
+static int do_vmsplice(int fd, unsigned char **buf, int len)
 {
 	struct pollfd pfd = { .fd = fd, .events = POLLIN, };
 	struct iovec iov;
 	int written;
 	int ret;
 
-	iov.iov_base = buf;
+	iov.iov_base = *buf;
 	iov.iov_len = len;
 	ret = 0;
 
@@ -51,12 +63,14 @@ int do_vmsplice(int fd, void *buf, int len)
 		}
 	}
 
+	if (!*buf)
+		*buf = iov.iov_base;
 	return ret;
 }
 
 static int usage(char *name)
 {
-	fprintf(stderr, "| %s [-d(ump)]\n", name);
+	fprintf(stderr, "| %s [-d(ump)] [-a(ascii)] [-m(ap)] [-z(eromap)]\n", name);
 	return 1;
 }
 
@@ -64,10 +78,22 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "d")) != -1) {
+	while ((c = getopt(argc, argv, "admz")) != -1) {
 		switch (c) {
+		case 'a':
+			do_ascii = 1;
+			index++;
+			break;
 		case 'd':
 			do_dump = 1;
+			index++;
+			break;
+		case 'm':
+			splice_flags |= SPLICE_F_MOVE;
+			index++;
+			break;
+		case 'z':
+			do_zeromap = 1;
 			index++;
 			break;
 		default:
@@ -84,7 +110,14 @@ static void hexdump(unsigned char *buf, int len)
 
 	for (i = 0; i < len; i++)
 		printf("%02x", buf[i]);
-	printf("\n");
+}
+
+static void asciidump(unsigned char *buf, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+		printf("%c", buf[i]);
 }
 
 int main(int argc, char *argv[])
@@ -98,18 +131,26 @@ int main(int argc, char *argv[])
 	if (check_input_pipe())
 		return usage(argv[0]);
 
-	buf = malloc(4096);
+	if (!do_zeromap) {
+		buf = malloc(4096);
+		memset(buf, 0, 4096);
+	} else
+		buf = NULL;
 
-	memset(buf, 0, 4096);
-
-	ret = do_vmsplice(STDIN_FILENO, buf, 4096);
+	ret = do_vmsplice(STDIN_FILENO, &buf, 4096);
 	if (ret < 0)
 		return 1;
 
-	printf("splice %d\n", ret);
-
 	if (do_dump)
 		hexdump(buf, ret);
+	if (do_ascii)
+		asciidump(buf, ret);
 
-	return 0;
+	if (splice_flags & SPLICE_F_MOVE) {
+		ret = do_vmsplice_unmap(STDIN_FILENO, buf, 4096);
+		if (ret < 0)
+			perror("vmsplice");
+	}
+
+	return ret;
 }
