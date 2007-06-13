@@ -17,6 +17,7 @@ static int do_dump;
 static int do_ascii;
 static int do_zeromap;
 static int splice_flags;
+static unsigned int splice_size = SPLICE_SIZE;
 
 static int do_vmsplice_unmap(int fd, unsigned char *buf, int len)
 {
@@ -70,7 +71,7 @@ static int do_vmsplice(int fd, void **buf, int len)
 
 static int usage(char *name)
 {
-	fprintf(stderr, "| %s [-d(ump)] [-a(ascii)] [-m(ap)] [-z(eromap)]\n", name);
+	fprintf(stderr, "| %s [-s(ize)] [-d(ump)] [-a(ascii)] [-m(ap)] [-z(eromap)] [-n non-block]\n", name);
 	return 1;
 }
 
@@ -78,7 +79,7 @@ static int parse_options(int argc, char *argv[])
 {
 	int c, index = 1;
 
-	while ((c = getopt(argc, argv, "admz")) != -1) {
+	while ((c = getopt(argc, argv, "admzs:n")) != -1) {
 		switch (c) {
 		case 'a':
 			do_ascii = 1;
@@ -96,9 +97,22 @@ static int parse_options(int argc, char *argv[])
 			do_zeromap = 1;
 			index++;
 			break;
+		case 's':
+			splice_size = atoi(optarg);
+			index++;
+			break;
+		case 'n':
+			splice_flags |= SPLICE_F_NONBLOCK;
+			index++;
+			break;
 		default:
 			return -1;
 		}
+	}
+
+	if (do_zeromap && !(splice_flags & SPLICE_F_MOVE)) {
+		fprintf(stderr, "zero map only valid for -m(ove)\n");
+		return -1;
 	}
 
 	return index;
@@ -131,20 +145,17 @@ int main(int argc, char *argv[])
 	if (check_input_pipe())
 		return usage(argv[0]);
 
-	if (do_zeromap && !(splice_flags & SPLICE_F_MOVE)) {
-		fprintf(stderr, "zero map only valid for -m(ove)\n");
-		return usage(argv[0]);
-	}
-
 	if (!do_zeromap) {
-		buf = malloc(4096);
-		memset(buf, 0, 4096);
+		buf = malloc(splice_size);
+		memset(buf, 0, splice_size);
 	} else
 		buf = NULL;
 
-	ret = do_vmsplice(STDIN_FILENO, &buf, 4096);
+	ret = do_vmsplice(STDIN_FILENO, &buf, splice_size);
 	if (ret < 0)
 		return 1;
+	else if (!ret)
+		return 0;
 
 	if (do_dump)
 		hexdump(buf, ret);
@@ -152,7 +163,7 @@ int main(int argc, char *argv[])
 		asciidump(buf, ret);
 
 	if (splice_flags & SPLICE_F_MOVE) {
-		ret = do_vmsplice_unmap(STDIN_FILENO, buf, 4096);
+		ret = do_vmsplice_unmap(STDIN_FILENO, buf, ret);
 		if (ret < 0)
 			perror("vmsplice");
 	}
