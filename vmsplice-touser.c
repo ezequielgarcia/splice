@@ -49,6 +49,7 @@ static int do_vmsplice(int fd, unsigned char **buf, int len)
 			return error("poll");
 
 		written = svmsplice(fd, &iov, 1, splice_flags);
+		*buf = iov.iov_base;
 
 		if (written < 0)
 			return error("vmsplice");
@@ -63,8 +64,6 @@ static int do_vmsplice(int fd, unsigned char **buf, int len)
 		}
 	}
 
-	if (!*buf)
-		*buf = iov.iov_base;
 	return ret;
 }
 
@@ -130,6 +129,11 @@ int main(int argc, char *argv[])
 
 	if (check_input_pipe())
 		return usage(argv[0]);
+
+	if (do_zeromap && !(splice_flags & SPLICE_F_MOVE)) {
+		fprintf(stderr, "zero map only valid for -m(ove)\n");
+		return usage(argv[0]);
+	}
 
 	if (!do_zeromap) {
 		buf = malloc(4096);
