@@ -28,16 +28,15 @@ static int do_vmsplice_unmap(int fd, unsigned char *buf, int len)
 	return svmsplice(fd, &iov, 1, SPLICE_F_UNMAP);
 }
 
-static int do_vmsplice(int fd, unsigned char **buf, int len)
+static int do_vmsplice(int fd, void **buf, int len)
 {
 	struct pollfd pfd = { .fd = fd, .events = POLLIN, };
-	struct iovec iov;
+	struct iovec iov = {
+		.iov_base = *buf,
+		.iov_len = len,
+	};
 	int written;
-	int ret;
-
-	iov.iov_base = *buf;
-	iov.iov_len = len;
-	ret = 0;
+	int ret = 0;
 
 	while (len) {
 		/*
@@ -49,7 +48,9 @@ static int do_vmsplice(int fd, unsigned char **buf, int len)
 			return error("poll");
 
 		written = svmsplice(fd, &iov, 1, splice_flags);
-		*buf = iov.iov_base;
+
+		if (!ret)
+			*buf = iov.iov_base;
 
 		if (written < 0)
 			return error("vmsplice");
@@ -121,7 +122,7 @@ static void asciidump(unsigned char *buf, int len)
 
 int main(int argc, char *argv[])
 {
-	unsigned char *buf;
+	void *buf;
 	int ret;
 
 	if (parse_options(argc, argv) < 0)
