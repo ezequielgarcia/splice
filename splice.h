@@ -34,9 +34,15 @@
 				 /* from/to, of course */
 #define SPLICE_F_MORE	(0x04)	/* expect more data */
 #define SPLICE_F_GIFT   (0x08)  /* pages passed in are a gift */
-#define SPLICE_F_UNMAP	(0x10)	/* undo vmsplice map */
 
 #endif /* SPLICE_F_MOVE defined */
+
+/*
+ * SPLICE_F_UNMAP was introduced later, so check for that seperately
+ */
+#ifndef SPLICE_F_UNMAP
+#define SPLICE_F_UNMAP	(0x10)	/* undo vmsplice map */
+#endif
 
 static inline int ssplice(int fdin, loff_t *off_in, int fdout, loff_t *off_out,
 			  size_t len, unsigned int flags)
