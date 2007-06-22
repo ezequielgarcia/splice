@@ -11,4 +11,5 @@ splice-test4c
 splice-test4s
 vmsplice
 vmsplice2
+vmsplice-to-user
 splice-bench

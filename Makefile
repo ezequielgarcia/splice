@@ -4,6 +4,7 @@ PROGS	= ktee ktee-net splice-cp splice-in splice-out splice-tonet splice-fromnet
 MANS	= splice.2 tee.2 vmsplice.2
 
 all: depend $(PROGS)
+	$(MAKE) -C nettest
 
 %.o: %.c
 	$(CC) -o $*.o -c $(CFLAGS) $<
@@ -13,6 +14,7 @@ depend:
 
 clean:
 	-rm -f *.o $(PROGS) .depend
+	$(MAKE) -C nettest clean
 
 INSTALL = install
 prefix = /usr/local

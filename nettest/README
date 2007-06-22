@@ -1,0 +1,11 @@
+Simple networking test stuff, to compare splice/vmsplice with
+send()/recv(). The basic setup is transmitting and receiving
+buffers of data with crc checksums attached. Speed and sys/usr
+stats are shown, so both performance and data integrity can
+be tested.
+
+The basic pair is xmit/recv, which talk to each other. It's
+important to use the same message size, or it wont work. sf can
+also talk to recv. To do that, you need to prepare a data file
+with fillfile first.
+
