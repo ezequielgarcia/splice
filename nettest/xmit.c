@@ -24,7 +24,7 @@ static unsigned int msg_size = 4096;
 static int use_splice = 1;
 static unsigned long packets = -1;
 
-static unsigned long seed = 0x9e37fffffffc0001UL;
+static unsigned long seed = 0x9e370001UL;
 
 unsigned long mtime_since(struct timeval *s, struct timeval *e)
 {

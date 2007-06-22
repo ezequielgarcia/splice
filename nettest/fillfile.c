@@ -9,7 +9,7 @@
 
 static unsigned int msg_size = 4096;
 static unsigned int file_size = 128;
-static unsigned long seed = 0x9e37fffffffc0001UL;
+static unsigned long seed = 0x9e370001UL;
 
 static int usage(const char *name)
 {
