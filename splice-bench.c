@@ -161,7 +161,8 @@ static int server(int offset)
 	int sk, opt;
 
 	bind_to_cpu(offset);
-	nice(-20);
+	if (nice(-20) < 0)
+		perror("nice");
 
 	sk = socket(PF_INET, SOCK_STREAM, 0);
 	if (sk < 0)
@@ -420,7 +421,8 @@ static int client(int offset)
 	char fname[64];
 
 	bind_to_cpu(offset);
-	nice(-20);
+	if (nice(-20) < 0)
+		perror("nice");
 
 	if (!write_to_null)
 		out_fd = client_open_net(offset);

@@ -69,12 +69,18 @@ static int fill_file(int fd)
 	unsigned long long fs = (unsigned long long) file_size * 1024 * 1024ULL;
 
 	while (fs) {
+		int ret;
+
 		if (fs < msg_size)
 			break;
 
 		fill_buf(m, msg_size);
-		write(fd, m, msg_size);
-		fs -= msg_size;
+		ret = write(fd, m, msg_size);
+		if (ret < 0) {
+			perror("write");
+			return -1;
+		}
+		fs -= ret;
 	}
 
 	close(fd);

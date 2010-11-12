@@ -146,8 +146,10 @@ static int child(void)
 		return error("connect");
 
 	start_timing("Empty buffer");
-	for (i = 0; i < NR; i++)
-		write(sk, buffer, BUFSIZE);
+	for (i = 0; i < NR; i++) {
+		if (write(sk, buffer, BUFSIZE) != BUFSIZE)
+			return error("empty buffer write");
+	}
 	end_timing(NR*BUFSIZE, &r1);
 
 	fd = open("largefile", O_RDONLY);
@@ -158,7 +160,8 @@ static int child(void)
 	for (i = 0; i < NR; i++) {
 		if (read(fd, buffer, BUFSIZE) != BUFSIZE)
 			return error("largefile read");
-		write(sk, buffer, BUFSIZE);
+		if (write(sk, buffer, BUFSIZE) != BUFSIZE)
+			return error("largefile write");
 	}
 	end_timing(NR*BUFSIZE, &r2);
 	close(fd);
@@ -297,7 +300,7 @@ static void setup_shared_var(void)
 	BUG_ON(fd == -1);
 	close(fd);
 
-	fd = open(".tmp_mmap", O_RDWR|O_CREAT|O_TRUNC);
+	fd = open(".tmp_mmap", O_RDWR|O_CREAT|O_TRUNC, 0644);
 	BUG_ON(fd == -1);
 	ret = write(fd, zerobuff, 4096);
 	BUG_ON(ret != 4096);
@@ -349,7 +352,8 @@ static void lowprio_cycle_soak_loop(void)
 	 * We are a nice +19 SCHED_BATCH task:
 	 */
 	BUG_ON(sched_setscheduler(0, SCHED_BATCH, &p) != 0);
-	nice(40);
+	if (nice(40) < 0)
+		perror("nice");
 
 	rdtscll(t0);
 	while (cycles >= 0) {
@@ -375,7 +379,9 @@ int main(__attribute__((__unused__)) int argc, __attribute__((__unused__)) char 
 		exit(0);
 	}
 
-	nice(-20);
+	if (nice(-20) < 0)
+		perror("nice");
+
 	child();
 	kill(pid, SIGHUP);
 	exit(0);

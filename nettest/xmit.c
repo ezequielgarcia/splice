@@ -158,7 +158,7 @@ static int vmsplice_in(void *buf, int pipefd, unsigned int len)
  * Keep four pipes of buffers, that should be enough to ensure that
  * we don't reuse
  */
-static void setup_buffers(void)
+static int setup_buffers(void)
 {
 	int i;
 
@@ -166,8 +166,14 @@ static void setup_buffers(void)
 
 	buffers = malloc(sizeof(void *) * nr_bufs);
 
-	for (i = 0; i < nr_bufs; i++)
-		posix_memalign(&buffers[i], 4096, msg_size);
+	for (i = 0; i < nr_bufs; i++) {
+		if (posix_memalign(&buffers[i], 4096, msg_size)) {
+			printf("posix_memalign: %s\n", strerror(errno));
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 static void free_buffers(void)
@@ -188,7 +194,8 @@ static int splice_send_loop(int fd)
 	if (pipe(pipes) < 0)
 		return error("pipe");
 
-	setup_buffers();
+	if (setup_buffers())
+		return -1;
 
 	while (packets--) {
 		m = buffers[cur_buf];
