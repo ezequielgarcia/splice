@@ -19,12 +19,13 @@
 #include "msg.h"
 
 static unsigned int msg_size = 4096;
-static int use_splice = 1;
+static int use_splice;
+static int splice_to_file = 1; /* default */
 static int splice_move;
 
 static int usage(const char *name)
 {
-	fprintf(stderr, "%s: [-s(ize)] [-m(ove)] [-r(ecv)] port\n", name);
+	fprintf(stderr, "%s: [-s(ize)] [-m(ove)] [-r(ecv)] port file\n", name);
 	return 1;
 }
 
@@ -241,6 +242,30 @@ static int vmsplice_out(void **buf, int pipefd, unsigned int len)
 	return len;
 }
 
+static int splice_to_file_recv_loop(int fd, const char *filename)
+{
+	int filefd;
+	loff_t off = 0;
+
+	filefd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (filefd < 0)
+		return error("open output file");
+	while (1) {
+		/*
+		 * fill file with network data
+		 */
+		int ret = ssplice(fd, NULL, filefd, &off, msg_size, 0);
+		if (ret < 0) {
+			close(filefd);
+			return error("splice from net");
+		}
+		if (!ret)
+			break;
+	}
+	close(filefd);
+	return 0;
+}
+
 static int splice_recv_loop(int fd)
 {
 	struct msg *m;
@@ -298,7 +323,7 @@ static int splice_recv_loop(int fd)
 	return 0;
 }
 
-static int recv_loop(int fd)
+static int recv_loop(int fd, const char *filename)
 {
 	struct rusage ru_s, ru_e;
 	struct timeval start;
@@ -308,7 +333,9 @@ static int recv_loop(int fd)
 	gettimeofday(&start, NULL);
 	getrusage(RUSAGE_SELF, &ru_s);
 
-	if (use_splice)
+	if (splice_to_file)
+		ret = splice_to_file_recv_loop(fd, filename);
+	else if (use_splice)
 		ret = splice_recv_loop(fd);
 	else
 		ret = normal_recv_loop(fd);
@@ -372,5 +399,5 @@ int main(int argc, char *argv[])
 	if (connfd < 0)
 		return connfd;
 
-	return recv_loop(connfd);
+	return recv_loop(connfd, argv[index+1]);
 }
