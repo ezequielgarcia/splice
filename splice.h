@@ -22,6 +22,10 @@
 #define __NR_sys_splice		1297
 #define __NR_sys_tee		1301
 #define __NR_sys_vmsplice	1302
+#elif defined(__arm__)
+#define __NR_sys_splice		340
+#define __NR_sys_tee		342
+#define __NR_sys_vmsplice	343
 #else
 #error unsupported arch
 #endif
