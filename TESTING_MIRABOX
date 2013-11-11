@@ -1,0 +1,51 @@
+MVEBU: test splice from socket to file support
+==============================================
+
+1. Cross-build host side 'sf' and target side 'recv' to send a file
+from the host and receive it from the target.
+
+$ CC=gcc make
+$ cp nettest/sf ~/bin/sf
+
+$ make clean
+
+$ CC=arm-{target-machine}-gcc make
+$ cp nettest/recv ${target_nfs}/bin
+
+2. On the target side, start the 'recv' tool (on some port):
+
+$ recv ${port} ${file}
+
+IMPORTANT: Support for splice to file has been added to ext4
+and xfs filesystem only. So the ${file} must be on one of those.
+
+3. On the host side, execute 'sf' with a file parameter
+to send a file to the target (on the same port as above).
+
+$ sf ${file} ${target_ip} ${port}
+
+4. The sent file can be checked with tools like md5sum
+to verify it was sent OK.
+
+Example
+-------
+
+(On the target, you need to mount the ext4/xfs filesystem first)
+
+$ mount /dev/sda /mnt
+
+$ recv 12345 /mnt/test_target
+recv: msg=4kb, recv()
+Waiting for connect...
+
+(On the host)
+
+$ sf test_1M 192.168.0.159 12345
+
+Creating files to send
+----------------------
+
+This package includes a tool to create the test file
+to send with 'sf'. It's called 'fillfile'. You can also
+use fallocate, or just send some file in your laptop.
+
