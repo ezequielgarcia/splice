@@ -72,7 +72,7 @@ static int parse_options(int argc, char *argv[])
 		switch (c) {
 		case 's':
 			msg_size = atoi(optarg);
-			index++;
+			index +=2;
 			break;
 		case 'n':
 			use_splice = 0;
@@ -80,7 +80,7 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'p':
 			packets = atoi(optarg);
-			index++;
+			index +=2;
 			break;
 		default:
 			return -1;

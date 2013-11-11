@@ -98,7 +98,7 @@ static int parse_options(int argc, char *argv[])
 		switch (c) {
 		case 's':
 			msg_size = atoi(optarg);
-			index++;
+			index+=2;
 			break;
 		case 'm':
 			splice_move = 1;

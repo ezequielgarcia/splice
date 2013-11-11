@@ -25,11 +25,11 @@ static int parse_options(int argc, char *argv[])
 		switch (c) {
 		case 's':
 			msg_size = atoi(optarg);
-			index++;
+			index+=2;
 			break;
 		case 'z':
 			file_size = atoi(optarg);
-			index++;
+			index+=2;
 			break;
 		default:
 			return -1;
