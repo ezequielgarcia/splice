@@ -1,5 +1,5 @@
 #CC	= /opt/intel/cce/9.1.045/bin/icc
-CC	= gcc
+CC	?= gcc
 OPTFLAGS= -O2 -g $(EXTFLAGS)
 CFLAGS	= -Wall -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 $(OPTFLAGS)
 PROGS	= xmit recv sf fillfile
